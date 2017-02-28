@@ -8,7 +8,7 @@ import random
 api_key = "8257fbe241e266367f27e30b0e866aba"
 last_fm_username = "schiz0rr"
 top_tracks_limit = "50" # The number of results to fetch per
-top_tracks_period = "6month" # overall | 7day | 1month | 3month | 6month | 12month - The time period over which to retrieve top tracks for.
+top_tracks_period = "3month" # overall | 7day | 1month | 3month | 6month | 12month - The time period over which to retrieve top tracks for.
 loved_or_top = random.randint(0,1)
 
 if loved_or_top == 0:

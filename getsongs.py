@@ -17,6 +17,8 @@ def setup():
     howmanyfiles = len(os.listdir('lyricsstash'))
     newfilename = get_new_file(howmanyfiles)
     lyricsfile = open(newfilename, 'ab+')
+ 
+
     api_key = "8257fbe241e266367f27e30b0e866aba"
     last_fm_username = "schiz0rr"
     top_tracks_limit = "100" # The number of results to fetch per

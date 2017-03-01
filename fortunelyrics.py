@@ -14,7 +14,11 @@ def get_song():
         topfile = os.listdir('lyricsstash')[0]
         topfilepath = 'lyricsstash/' + str(topfile)
         lyricsfile = open(topfilepath, 'r+')
-        print lyricsfile.read().rstrip('\n')
+        output = lyricsfile.read().rstrip('\n')
+        lenoutput = len(output)
+
+        print output
+        print lenoutput
         os.remove(topfilepath)
     except IndexError:
         print "Oh shit, I ran out of songs :("

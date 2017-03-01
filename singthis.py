@@ -1,15 +1,7 @@
 
 import json
 import urllib2
-import sys
 import subprocess
-import random
-import time
-import os
-import fileinput
-from glob import glob
-
-
 
 def setup():
     global api_url
@@ -19,8 +11,6 @@ def setup():
 
 setup()
 response = json.loads(urllib2.urlopen(api_url).read())
-# print response	
-
 trackname = response.get("recenttracks").get("track")[0].get("name")
 print trackname
 trackartist = response.get("recenttracks").get("track")[0].get("artist").get("#text")

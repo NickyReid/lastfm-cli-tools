@@ -5,3 +5,4 @@ Edit the last_fm_username variable in fortunelyrics.py to get songs from your lo
 To run:
 pip install requirements.txt
 python fortunelyrics.py
+:)

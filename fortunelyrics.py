@@ -25,7 +25,7 @@ def get_song():
         lenoutput = len(output)
         #todo: empty files
         print output
-        print lenoutput
+        # print lenoutput
         os.remove(filepath)
     except IndexError:
         print "Oh shit, I ran out of songs :("

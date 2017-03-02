@@ -12,8 +12,6 @@ def setup():
 setup()
 response = json.loads(urllib2.urlopen(api_url).read())
 trackname = response.get("recenttracks").get("track")[0].get("name").replace(')', '').replace('(','').replace("'", "")
-print trackname
 trackartist = response.get("recenttracks").get("track")[0].get("artist").get("#text").replace(')', '').replace('(','').replace("'", "")
-print trackartist
 bashCommand = "songtext -t '" + trackname +  "' -a '" + trackartist +"'"
 print subprocess.check_output(['bash','-c',bashCommand])

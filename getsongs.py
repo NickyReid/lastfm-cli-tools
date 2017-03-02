@@ -14,7 +14,8 @@ def setup():
     global lyricsfile
     global api_url
     global loved_or_top
-    howmanyfiles = len(os.listdir('lyricsstash'))
+
+    howmanyfiles = len(os.listdir(os.path.dirname(os.path.realpath(__file__)) + '/lyricsstash'))
     newfilename = get_new_file(howmanyfiles)
     lyricsfile = open(newfilename, 'ab+')
  
@@ -31,7 +32,7 @@ def setup():
 
 def get_new_file(howmanyfiles): 
     newfilenumber = howmanyfiles + 1
-    newfilename = 'lyricsstash/' + str(newfilenumber) 
+    newfilename = os.path.dirname(os.path.realpath(__file__)) + '/lyricsstash/' + str(newfilenumber) 
     try:
         if os.path.getsize(newfilename) > 0:
             return get_new_file(howmanyfiles+1)

@@ -11,6 +11,7 @@ import fileinput
 
 def get_song():
     try:
+   
         topfile = os.listdir( os.path.dirname(os.path.realpath(__file__)) + '/lyricsstash')[0]
         topfilepath = os.path.dirname(os.path.realpath(__file__)) + '/lyricsstash/' + str(topfile)
         print topfilepath

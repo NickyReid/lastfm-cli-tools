@@ -19,7 +19,7 @@ def get_song(api_url):
         bashCommand = "songtext -t '" + trackname +  "' -a '" + trackartist +"'"
         return subprocess.check_output(['bash','-c',bashCommand])
     except subprocess.CalledProcessError:
-        return ". . . . . ."    
+        return trackartist + " - " + trackname +  "\n. . . . . . ."    
 
 
 api_url = setup()

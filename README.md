@@ -4,7 +4,9 @@
 Fortunelyrics prints random lyrics from songs on your last.fm.
 
 Instructions:
+```
 pip install requirements.txt
+```
 
 Populate lyric stash with N lyrics (defaults to 1 if n not specified):
 ```python

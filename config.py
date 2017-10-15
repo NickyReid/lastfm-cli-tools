@@ -3,7 +3,7 @@ import os
 
 class Config(object):
     API_KEY = "8257fbe241e266367f27e30b0e866aba"
-    CLEAN = True  # Omits lyrics with swearing
+    CLEAN = False   # Omits lyrics with swearing
     SWEARS = ["bitch", " ass ", "asshole"]  # not included in profanity library
     LYRIC_STASH_PATH = os.path.dirname(os.path.realpath(__file__)) + '/lyricsstash'
     TOP_TRACKS_LIMIT = "100"  # The number of results to fetch

@@ -3,3 +3,6 @@ lyricsstash/
 defaultuser
 config.pyc
 set_username.pyc
+*venv
+.DS_Store
+__pycache__/

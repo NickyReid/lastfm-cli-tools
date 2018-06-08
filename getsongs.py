@@ -20,7 +20,7 @@ class SongGetter:
         self.loved_or_top = random.randint(0, 2)
         self.top_tracks_period = Config.TOP_TRACKS_PERIOD
 
-        if "rand" in self.top_tracks_period.lower():
+        if "random" in self.top_tracks_period.lower():
             self.top_tracks_period = random.choice(Config.TOP_TRACKS_PERIOD_OPTIONS)
 
         self.lyric_stash_path = Config.LYRIC_STASH_PATH

@@ -21,7 +21,8 @@ class FortuneLyrics:
             print lyrics
             os.remove(self.file_path)
         except (IndexError, OSError):
-            print "Oh shit, I ran out of songs :( \nRun getsongs.py to repopulate lyric stash."
+            print "Ah jeez, I ran out of songs :( \nRun getsongs.py to repopulate lyric stash."
+
 
 if __name__ == '__main__':
     fortune_lyrics = FortuneLyrics()

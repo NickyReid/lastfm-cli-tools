@@ -4,16 +4,20 @@ import sys
 import subprocess
 import random
 import os
-from config import Config
+from config.config import Config
 from profanity import profanity
 from datetime import datetime
-from set_username import SetUsername
+from config.set_username import SetUsername
+
+
+def go():
+    SongGetter.run()
 
 
 class SongGetter:
 
     def __init__(self, username):
-        self.username = username if username else open('defaultuser', 'r').read()
+        self.username = username if username else open('config/defaultuser', 'r').read()
         self.clean = Config.CLEAN  # SFW option, doesn't write songs with swearing
         self.api_key = Config.API_KEY
         self.top_tracks_limit = Config.TOP_TRACKS_LIMIT
@@ -110,19 +114,23 @@ class SongGetter:
             if os.path.getsize(self.new_file_name) < 1:
                 os.remove(self.new_file_name)
 
+    @classmethod
+    def run(cls):
+        start_time = datetime.now()
+        username = SetUsername.set_username()
+
+        try:
+            count = int(sys.argv[1])
+        except IndexError:
+            count = 1
+        for i in range(count):
+            song_getter = SongGetter(username)
+            lyrics = song_getter.get_lyrics()
+            song_getter.write_file(lyrics)
+
+        end_time = datetime.now()
+        print "(took {time} seconds)".format(time=(end_time - start_time).seconds)
+
 
 if __name__ == '__main__':
-    start_time = datetime.now()
-    username = SetUsername.set_username()
-
-    try:
-        count = int(sys.argv[1])
-    except IndexError:
-        count = 1
-    for i in range(count):
-        song_getter = SongGetter(username)
-        lyrics = song_getter.get_lyrics()
-        song_getter.write_file(lyrics)
-
-    end_time = datetime.now()
-    print "(took {time} seconds)".format(time=(end_time - start_time).seconds)
+    SongGetter.run()

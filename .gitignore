@@ -1,8 +1,10 @@
 .idea
-lyricsstash/
-defaultuser
-config.pyc
-set_username.pyc
-*venv
+config/lyricsstash/
+config/defaultuser
 .DS_Store
 __pycache__/
+*/users/
+*.egg
+*.egg-info
+*venv
+*.pyc

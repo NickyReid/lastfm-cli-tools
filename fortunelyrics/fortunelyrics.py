@@ -1,12 +1,17 @@
 import os
 import random
-from config import Config
+from config.config import Config
+
+
+def go():
+    FortuneLyrics.run()
 
 
 class FortuneLyrics:
 
     def __init__(self):
         self.lyric_stash = Config.LYRIC_STASH_PATH
+            # Config.LYRIC_STASH_PATH
         self.files = None
         self.random_file = None
         self.file_path = None
@@ -23,7 +28,12 @@ class FortuneLyrics:
         except (IndexError, OSError):
             print "Ah jeez, I ran out of songs :( \nRun getsongs.py to repopulate lyric stash."
 
+    @classmethod
+    def run(cls):
+        fortune_lyrics = FortuneLyrics()
+        fortune_lyrics.print_song()
+
 
 if __name__ == '__main__':
-    fortune_lyrics = FortuneLyrics()
-    fortune_lyrics.print_song()
+    FortuneLyrics.run()
+

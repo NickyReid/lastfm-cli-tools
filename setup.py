@@ -3,8 +3,8 @@
 from setuptools import setup, find_packages
 
 requirements = [
-    'python-dateutil == 2.7.2',
-    'requests == 2.11.1',
+    'python-dateutil==2.7.2',
+    'requests==2.11.1',
     'songtext==0.1.5',
     'profanity'
 ]

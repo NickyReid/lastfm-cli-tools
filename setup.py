@@ -10,11 +10,11 @@ requirements = [
 ]
 
 setup_args = {
-    'name': 'fortunelyrics',
-    'version': '0.0.2',
+    'name': 'lastfm-cli-tools',
+    'version': '0.1.0',
 
     'packages': find_packages(),
-    'package_dir': {'fortunelyrics': 'fortunelyrics'},
+    'package_dir': {'lastfm-cli-tools': 'lastfm-cli-tools'},
     'package_data': {},
     'install_requires': requirements,
 

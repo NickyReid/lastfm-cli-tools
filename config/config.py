@@ -8,4 +8,4 @@ class Config(object):
     LYRIC_STASH_PATH = os.path.dirname(os.path.realpath(__file__)) + '/lyricsstash'
     TOP_TRACKS_LIMIT = "100"  # The number of results to fetch
     TOP_TRACKS_PERIOD_OPTIONS = ['all', '7day', '1month', '3month', '6month', '12month']
-    TOP_TRACKS_PERIOD = "random"  # random | overall | 7day | 1month | 3month | 6month | 12month
+    TOP_TRACKS_PERIOD = "random" # random | overall | 7day | 1month | 3month | 6month | 12month

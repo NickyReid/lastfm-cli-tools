@@ -14,8 +14,8 @@ def go():
 
 class LastHop:
 
-    def __init__(self, username, real_name, join_date, total_tracks, year=None):
-        self.timezone_diff = 4
+    def __init__(self, username, real_name, join_date, total_tracks):
+        self.timezone_diff = 0
         self.join_date = join_date.date()
         self.stats_date = datetime.today()
         self.username = username
@@ -82,7 +82,6 @@ class LastHop:
             for line in lines:
                 l = line.split('">')[0].split("\n")[0]
                 if l[0] is not " ":
-                    # print l
                     tracks_and_dates.append(l.replace('"', '').replace('&amp;', '&'))
             for i in range(0, len(tracks_and_dates)):
                 if '\xe2\x80\x94' in tracks_and_dates[i]:
@@ -203,9 +202,11 @@ class LastHop:
         day_list = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
         weekday = day_list[date.weekday()]
         today_file.close()
+        artist = max(artists, key=artists.get).replace('&#39;', '`') if artists else None
+        count = artists.get(max(artists, key=artists.get)) if artist else 0
         return "{date} ({weekday}): {artist} ({count})".format(date=date.year,
-                                                               artist=max(artists, key=artists.get).replace('&#39;', '`'),
-                                                               count=artists.get(max(artists, key=artists.get)),
+                                                               artist=artist,
+                                                               count=count,
                                                                weekday=weekday)
 
     def yearly_most_played_artists(self):
@@ -258,7 +259,6 @@ class LastHop:
                                 time = time[:6]
                             time = datetime.strptime(time, '%I:%M%p') + relativedelta(hours=self.timezone_diff)
                             time = time.time()
-                            # print time
                             seconds_passed = time.hour * 60 + time.minute
                             track_time_dict[seconds_passed] = time
                             times[seconds_passed] = track
@@ -275,15 +275,22 @@ class LastHop:
         for s in times.keys():
             diff = abs(seconds_passed_today - int(s))
             diff_times[times.get(s)] = diff
-        return {"track": min(diff_times, key=diff_times.get)}
+        track = min(diff_times, key=diff_times.get) if diff_times else None
+        return {"track": track}
 
     def yearly_around_this_time(self):
         date = self.stats_date.date()
         while True:
             played_nowish = self.around_this_time(date)
+            if type(played_nowish) != dict:
+                break
+            if played_nowish.get('track'):
+                song = played_nowish.get('track').replace('&#39;', '`')
+            else:
+                continue
             if played_nowish:
                 print "{year}: {song}".format(year=date.year,
-                                              song=played_nowish.get('track').replace('&#39;', '`'))
+                                              song=song)
             date = date - relativedelta(years=1)
             if date < self.join_date:
                 break

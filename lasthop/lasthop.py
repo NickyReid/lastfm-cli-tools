@@ -2,6 +2,7 @@ import os
 import json
 import urllib2
 import requests
+import multiprocessing
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from config.set_username import SetUsername
@@ -13,11 +14,10 @@ def go():
 
 class LastHop:
 
-    def __init__(self, username, real_name, join_date, total_tracks):
+    def __init__(self, username, real_name, join_date, total_tracks, year=None):
         self.timezone_diff = 4
         self.join_date = join_date.date()
         self.stats_date = datetime.today()
-
         self.username = username
         self.real_name = real_name if real_name else self.username
         self.total_tracks = int(total_tracks)
@@ -36,7 +36,6 @@ class LastHop:
                                                                     avg=self.avg_daily_tracks,
                                                                     s="s" if self.avg_daily_tracks > 1 else "")
 
-        self.write_all_files()
         print "- - - - - - - - - - - - - {date} - - - - - - - - - - - - - -".format(
             date=self.stats_date.date().strftime("%B %-d"))
         print "- - - - - - - - - - Most Played Artists - - - - - - - - - -"
@@ -61,20 +60,22 @@ class LastHop:
         :return: dictionary of artist and track information
         """
         today_file_path = "{path}/{date}".format(path=self.file_path, date=date)
-        today_file = open(today_file_path, 'w+')
+
         tracks_and_dates_list = []
         page = 1
         url = '{user_profile}?rangetype=1day&from={date}&page={page}'.format(user_profile=self.user_profile,
                                                                              date=date,
                                                                              page=str(page))
-
         artist_dict = {}
         while True:  # paging
             response = requests.get(url)
             if response.url != url:
                 break
+
             if "didn't scrobble anything" in response.content:
+                today_file = open(today_file_path, 'w+')
                 today_file.write("0")
+                today_file.close()
                 return []
             lines = response.content.split('title="')[1:]
             tracks_and_dates = []
@@ -100,7 +101,7 @@ class LastHop:
             url = '{user_profile}?rangetype=1day&from={date}&page={page}'.format(user_profile=self.user_profile,
                                                                                  date=date,
                                                                                  page=str(page))
-
+        today_file = open(today_file_path, 'w+')
         for key in artist_dict:
             today_file.write("{track}: {date}\n".format(track=key, date=artist_dict.get(key)))
         today_file.close()
@@ -113,19 +114,20 @@ class LastHop:
         :return:
         """
         day_file_path = "{path}/{date}".format(path=self.file_path, date=date)
-        day_file = open(day_file_path, 'ab+')
+        open(day_file_path, 'ab+').close()
         if (not os.path.getsize(day_file_path) > 0 or date == datetime.today().date() or
                 (date == datetime.today().date() - relativedelta(days=1) and
                  datetime.today().time().hour < self.timezone_diff)):
             self.process_day(date)
-        day_file.close()
         return day_file_path
 
-    def write_all_files(self):
+    def write_all_files(self, year=None):
         """
         Writes track data for each day on this day from join date until today
         """
         date = self.stats_date.date()
+        if year:
+            date = date.replace(year=year)
         day_file_path = "{path}/{date}".format(path=self.file_path, date=date)
         try:
             open(day_file_path, 'r+')
@@ -154,12 +156,15 @@ class LastHop:
                         self.first_n_hours(date=date)
                     new_day = False
 
+            if year:
+                break
+
             date = date - relativedelta(years=1)
             if date < self.join_date:
                 break
 
     @classmethod
-    def st_to_dict(self, line):
+    def st_to_dict(cls, line):
         track_dict = {}
         if line == "0":
             return 0
@@ -384,20 +389,44 @@ class LastHop:
 
         print "Getting music stats for {0}".format(username)
 
-        api_key = Config.API_KEY
-        api_url = "http://ws.audioscrobbler.com/2.0/?method=user.getinfo&user={user}&api_key={api_key}&format=json"\
-            .format(user=username, api_key=api_key)
-        api_response = json.loads(urllib2.urlopen(api_url).read())
+        user_data = get_lastfm_user_data(username)
 
-        join_date = datetime.fromtimestamp(float(api_response.get("user").get("registered").get("unixtime")))
-        real_name = api_response.get("user").get("realname")
-        total_tracks = api_response.get("user").get("playcount")
+        lastfm_user = LastHop(username=username,
+                              real_name=user_data.get("real_name"),
+                              join_date=user_data.get("join_date"),
+                              total_tracks=user_data.get("total_tracks"),)
 
-        LastHop(username=username, real_name=real_name, join_date=join_date, total_tracks=total_tracks).music_stats()
+        jobs = []
+        for i in range(2006, 2019):
+            p = multiprocessing.Process(target=lastfm_user.write_all_files, args=(i,))
+            jobs.append(p)
+            p.start()
+
+        for job in jobs:
+            job.join()
+
+        lastfm_user.stats_date = datetime.today()
+        lastfm_user.music_stats()
 
         end_time = datetime.now()
         total = end_time - start_time
         print "(took {time} seconds)".format(time=total.seconds)
+
+
+def get_lastfm_user_data(username):
+    api_key = Config.API_KEY
+
+    api_url = "http://ws.audioscrobbler.com/2.0/?method=user.getinfo&user={user}&api_key={api_key}&format=json" \
+        .format(user=username, api_key=api_key)
+    api_response = json.loads(urllib2.urlopen(api_url).read())
+    join_date = datetime.fromtimestamp(float(api_response.get("user").get("registered").get("unixtime")))
+    real_name = api_response.get("user").get("realname")
+    total_tracks = api_response.get("user").get("playcount")
+    return {
+        "join_date": join_date,
+        "real_name": real_name,
+        "total_tracks": total_tracks
+        }
 
 
 if __name__ == '__main__':

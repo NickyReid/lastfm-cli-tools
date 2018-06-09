@@ -4,6 +4,7 @@ import sys
 import subprocess
 import random
 import os
+import multiprocessing
 from config.config import Config
 from profanity import profanity
 from datetime import datetime
@@ -31,9 +32,7 @@ class SongGetter:
 
         if not os.path.exists(self.lyric_stash_path):
             os.makedirs(self.lyric_stash_path)
-
-        self.how_many_files = len(os.listdir(self.lyric_stash_path))
-        self.new_file_name = self.get_new_file(self.how_many_files)
+        self.new_file_name = self.get_new_file()
         self.lyrics_file = None
 
         self.api_url = self.get_api_url()
@@ -57,12 +56,12 @@ class SongGetter:
                                                                             top_tracks_period=self.top_tracks_period)
         return api_url
 
-    def get_new_file(self, how_many_files):
-        new_file_number = how_many_files + 1
+    def get_new_file(self):
+        new_file_number = random.randint(0, 9000)
         new_file_name = self.lyric_stash_path + "/{filenum}".format(filenum=str(new_file_number))
         try:
             if os.path.getsize(new_file_name) > 0:
-                return self.get_new_file(how_many_files + 1)
+                new_file_name = self.lyric_stash_path + "/{filenum}".format(filenum=str(new_file_number + 1))
         except OSError:
             pass
         return new_file_name
@@ -114,8 +113,13 @@ class SongGetter:
             if os.path.getsize(self.new_file_name) < 1:
                 os.remove(self.new_file_name)
 
+    def process_data(self):
+        lyrics = self.get_lyrics()
+        self.write_file(lyrics)
+
     @classmethod
     def run(cls):
+
         start_time = datetime.now()
         username = SetUsername.set_username()
 
@@ -123,10 +127,15 @@ class SongGetter:
             count = int(sys.argv[1])
         except IndexError:
             count = 1
+
+        jobs = []
         for i in range(count):
-            song_getter = SongGetter(username)
-            lyrics = song_getter.get_lyrics()
-            song_getter.write_file(lyrics)
+            p = multiprocessing.Process(target=SongGetter(username).process_data)
+            jobs.append(p)
+            p.start()
+
+        for job in jobs:
+            job.join()
 
         end_time = datetime.now()
         print "(took {time} seconds)".format(time=(end_time - start_time).seconds)

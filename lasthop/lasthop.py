@@ -397,7 +397,7 @@ class LastHop:
                               total_tracks=user_data.get("total_tracks"),)
 
         jobs = []
-        for i in range(2006, 2019):
+        for i in range(user_data.get('join_date').year, datetime.today().year + 1):
             p = multiprocessing.Process(target=lastfm_user.write_all_files, args=(i,))
             jobs.append(p)
             p.start()

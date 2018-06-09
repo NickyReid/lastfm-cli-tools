@@ -11,7 +11,6 @@ class FortuneLyrics:
 
     def __init__(self):
         self.lyric_stash = Config.LYRIC_STASH_PATH
-            # Config.LYRIC_STASH_PATH
         self.files = None
         self.random_file = None
         self.file_path = None

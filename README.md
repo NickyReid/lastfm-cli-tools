@@ -6,6 +6,8 @@ Best results when used with [lolcat cli colours](https://github.com/busyloop/lol
 
 ### Print lyrics from songs on your last.fm.
 
+Uses the [Last.fm API](https://www.last.fm/api) and [Songtext python library](https://pypi.org/project/songtext/) 
+
 #### Instructions:
 
 ##### Populate lyric stash with N lyrics (defaults to 1 if n not specified):
@@ -32,9 +34,13 @@ Example: (colourful output courtesy of [lolcat](https://github.com/busyloop/lolc
 ![singthis for schiz0rr](https://nickyreid.github.io/images/lastfm-cli-tools-screenshots/singthis2018-06-09.png "$ sing")
 
 
+
+
 ## Lasthop Music Stats
 
 ### Lasthop fetches music stats from your last.fm profile about your listening habits from this day in the years gone by.
+
+Since the last.fm API doesn't support track history, this program scrapes users' Last.fm profile for track data.
 
 ##### To run:
 

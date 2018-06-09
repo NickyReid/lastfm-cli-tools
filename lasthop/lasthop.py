@@ -27,7 +27,7 @@ class LastHop:
         if not os.path.exists(self.file_path):
             os.makedirs(self.file_path)
 
-    def music_stats(self):
+    def user_stats(self):
         print "{user} has been on Last.fm for {years} years " \
               "\nThey've played {total_tracks} tracks \n" \
               "That's an average of {avg} track{s} per day.".format(user=self.real_name,
@@ -36,6 +36,7 @@ class LastHop:
                                                                     avg=self.avg_daily_tracks,
                                                                     s="s" if self.avg_daily_tracks > 1 else "")
 
+    def music_stats(self):
         print "- - - - - - - - - - - - - {date} - - - - - - - - - - - - - -".format(
             date=self.stats_date.date().strftime("%B %-d"))
         print "- - - - - - - - - - Most Played Artists - - - - - - - - - -"
@@ -402,6 +403,8 @@ class LastHop:
                               real_name=user_data.get("real_name"),
                               join_date=user_data.get("join_date"),
                               total_tracks=user_data.get("total_tracks"),)
+
+        lastfm_user.user_stats()
 
         jobs = []
         for i in range(user_data.get('join_date').year, datetime.today().year + 1):

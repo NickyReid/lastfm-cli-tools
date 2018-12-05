@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 requirements = [
     'python-dateutil==2.7.2',
-    'requests==2.11.1',
+    'requests==2.20.0',
     'songtext==0.1.5',
     'profanity'
 ]

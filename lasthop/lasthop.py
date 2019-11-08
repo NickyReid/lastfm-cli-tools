@@ -1,12 +1,14 @@
 import os
 import json
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 import requests
 import multiprocessing
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from config.set_username import SetUsername
 from config.config import Config
+from bs4 import BeautifulSoup
+
 
 def go():
     LastHop.run()
@@ -28,24 +30,22 @@ class LastHop:
             os.makedirs(self.file_path)
 
     def user_stats(self):
-        print "{user} has been on Last.fm for {years} years " \
+        print("{user} has been on Last.fm for {years} years " \
               "\nThey've played {total_tracks} tracks \n" \
               "That's an average of {avg} track{s} per day.".format(user=self.real_name,
                                                                     years=(self.stats_date.year - self.join_date.year),
                                                                     total_tracks="{:,}".format(self.total_tracks),
                                                                     avg=self.avg_daily_tracks,
-                                                                    s="s" if self.avg_daily_tracks > 1 else "")
+                                                                    s="s" if self.avg_daily_tracks > 1 else ""))
 
     def music_stats(self):
-        print "- - - - - - - - - - - - - {date} - - - - - - - - - - - - - -".format(
-            date=self.stats_date.date().strftime("%B %-d"))
-        print "- - - - - - - - - - Most Played Artists - - - - - - - - - -"
+        print("- - - - - - - - - - - - - {date} - - - - - - - - - - - - - -".format(
+            date=self.stats_date.date().strftime("%B %-d")))
+        print("- - - - - - - - - - Most Played Artists - - - - - - - - - -")
         self.yearly_most_played_artists()
-        print "\n- - - - - - - - - Played around this time - - - - - - - - -"
-        self.yearly_around_this_time()
-        print "\n- - - - - - - - - - - All Artists  - - - - - - - - - - - - -"
+        print("\n- - - - - - - - - - - All Artists  - - - - - - - - - - - - -")
         self.yearly_all_artists()
-        print "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+        print("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -")
         if self.stats_date.date() == datetime.today().date() and datetime.today().time().hour < 2:
             try:
                 day_file_path = "{path}/{date}".format(path=self.file_path, date=self.stats_date)
@@ -60,8 +60,9 @@ class LastHop:
         :param prev: Is this the day before? Used for timezone difference. I know it's hideous.
         :return: dictionary of artist and track information
         """
+        # print("process day")
         today_file_path = "{path}/{date}".format(path=self.file_path, date=date)
-
+        # print(today_file_path)
         tracks_and_dates_list = []
         page = 1
         url = '{user_profile}?rangetype=1day&from={date}&page={page}'.format(user_profile=self.user_profile,
@@ -72,38 +73,33 @@ class LastHop:
             response = requests.get(url)
             if response.url != url:
                 break
-
-            if "didn't scrobble anything" in response.content:
+            content = response.content.decode("utf-8")
+            # print(content)
+            if "didn't scrobble anything" in content:
                 today_file = open(today_file_path, 'w+')
                 today_file.write("0")
                 today_file.close()
                 return []
-            lines = response.content.split('title="')[1:]
-            tracks_and_dates = []
+            lines = content.split('\n')
             for line in lines:
-                l = line.split('">')[0].split("\n")[0]
-                if l[0] is not " ":
-                    tracks_and_dates.append(l.replace('"', '').replace('&amp;', '&'))
-            for i in range(0, len(tracks_and_dates)):
-                if '\xe2\x80\x94' in tracks_and_dates[i]:
-                    if (datetime.strptime(tracks_and_dates[i + 1], '%A %d %b %Y, %I:%M%p').time().hour > 21 and
-                            self.stats_date.date().day == date.day):
-                        continue
+                if "data-artist-name=" in line:
+                    track_artist = line.split("data-artist-name=")[1:]
+
+                    if len(track_artist) > 0:
+                        track_artist = track_artist[0]
+
+                    if artist_dict.get(track_artist):
+                        artist_dict[track_artist] += 1
                     else:
-                        if artist_dict.get(tracks_and_dates[i]):
-                            date_list = artist_dict.get(tracks_and_dates[i])
-                            date_list.append(tracks_and_dates[i + 1])
-                            artist_dict[tracks_and_dates[i]] = date_list
-                        else:
-                            artist_dict[tracks_and_dates[i]] = [tracks_and_dates[i + 1]]
-                        tracks_and_dates_list.append({"track": tracks_and_dates[i], "date": tracks_and_dates[i + 1]})
+                        artist_dict[track_artist] = 1
+
             page += 1
             url = '{user_profile}?rangetype=1day&from={date}&page={page}'.format(user_profile=self.user_profile,
                                                                                  date=date,
                                                                                  page=str(page))
         today_file = open(today_file_path, 'w+')
-        for key in artist_dict:
-            today_file.write("{track}: {date}\n".format(track=key, date=artist_dict.get(key)))
+        for artist in artist_dict:
+            today_file.write("{track}: {count}\n".format(track=artist, count=artist_dict.get(artist)))
         today_file.close()
         return artist_dict
 
@@ -129,9 +125,11 @@ class LastHop:
         if year:
             date = date.replace(year=year)
         day_file_path = "{path}/{date}".format(path=self.file_path, date=date)
+
         try:
             open(day_file_path, 'r+')
-        except IOError:
+        except IOError as e:
+            print(str(e))
             for f in os.listdir(self.file_path):
                 if os.path.isfile(f):
                     os.remove(f)
@@ -184,21 +182,10 @@ class LastHop:
             if line == "0":
                 return 0
             track = line.split(':', 1)[0]
-            time = line.split(':', 1)[1]
-            if track_dict.get(track):
-                date_list = track_dict.get(track)
-                date_list.append(time.strip("["))
-                track_dict[track] = date_list
-            else:
-                track_dict[track] = [time]
+            count = int(line.split(':', 1)[1].split("\n")[0])
+            track_dict[track] = count
         for track in track_dict:
-            date_list = track_dict.get(track)
-            count = 0
-            for dat in date_list:
-                count += dat.count('am') + dat.count('pm')
-            track = track.split('\xe2\x80\x94')[0]
-            if track[0] == '0':
-                track = track[1:]
+            count = track_dict[track]
             artists[track] = artists.get(track, 0) + count
         day_list = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
         weekday = day_list[date.weekday()]
@@ -215,7 +202,7 @@ class LastHop:
         while True:
             most_played = self.most_played_artist(date)
             if most_played:
-                print most_played
+                print(most_played)
             date = date - relativedelta(years=1)
             if date < self.join_date:
                 break
@@ -273,28 +260,11 @@ class LastHop:
                     track_time_dict[seconds_passed] = time
                     times[seconds_passed] = track
         diff_times = {}
-        for s in times.keys():
+        for s in list(times.keys()):
             diff = abs(seconds_passed_today - int(s))
             diff_times[times.get(s)] = diff
         track = min(diff_times, key=diff_times.get) if diff_times else None
         return {"track": track}
-
-    def yearly_around_this_time(self):
-        date = self.stats_date.date()
-        while True:
-            played_nowish = self.around_this_time(date)
-            if type(played_nowish) != dict:
-                break
-            if played_nowish.get('track'):
-                song = played_nowish.get('track').replace('&#39;', '`')
-            else:
-                continue
-            if played_nowish:
-                print "{year}: {song}".format(year=date.year,
-                                              song=song)
-            date = date - relativedelta(years=1)
-            if date < self.join_date:
-                break
 
     def first_n_hours(self, date):
         """
@@ -313,7 +283,7 @@ class LastHop:
                 d = self.st_to_dict(song)
                 if d == 0:
                     return []
-                song_dict[d.keys()[0]] = d.values()[0]
+                song_dict[list(d.keys())[0]] = list(d.values())[0]
         else:
             for song in day_before_songs:
                 if day_before_songs[0].get('track'):
@@ -378,14 +348,14 @@ class LastHop:
         while True:
             artists = self.all_artists_that_day(date)
             if artists:
-                print "* - {year} - *".format(year=date.year)
+                print("* - {year} - *".format(year=date.year))
                 for artist in sorted(artists, key=artists.__getitem__, reverse=True):
-                    print "\t{artist}: {plays}".format(artist=artist.replace('&#39;', '`'),
-                                                       plays=artists.get(artist))
+                    print("\t{artist}: {plays}".format(artist=artist.replace('&#39;', '`'),
+                                                       plays=artists.get(artist)))
                 total = 0
                 for count in artists:
                     total += artists.get(count)
-                print "       -  \n\tTotal tracks: {total}".format(total=total)
+                print("       -  \n\tTotal tracks: {total}".format(total=total))
             date = date - relativedelta(years=1)
             if date < self.join_date:
                 break
@@ -395,7 +365,7 @@ class LastHop:
         start_time = datetime.now()
         username = SetUsername.set_username()
 
-        print "Getting music stats for {0}".format(username)
+        print("Getting music stats for {0}".format(username))
 
         user_data = get_lastfm_user_data(username)
 
@@ -420,7 +390,7 @@ class LastHop:
 
         end_time = datetime.now()
         total = end_time - start_time
-        print "(took {time} seconds)".format(time=total.seconds)
+        print("(took {time} seconds)".format(time=total.seconds))
 
 
 def get_lastfm_user_data(username):
@@ -428,7 +398,7 @@ def get_lastfm_user_data(username):
 
     api_url = "http://ws.audioscrobbler.com/2.0/?method=user.getinfo&user={user}&api_key={api_key}&format=json" \
         .format(user=username, api_key=api_key)
-    api_response = json.loads(urllib2.urlopen(api_url).read())
+    api_response = json.loads(urllib.request.urlopen(api_url).read())
     join_date = datetime.fromtimestamp(float(api_response.get("user").get("registered").get("unixtime")))
     real_name = api_response.get("user").get("realname")
     total_tracks = api_response.get("user").get("playcount")

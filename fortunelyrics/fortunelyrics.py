@@ -22,10 +22,10 @@ class FortuneLyrics:
             self.file_path = self.lyric_stash + "/" + self.random_file
             lyrics_file = open(self.file_path, 'r+')
             lyrics = lyrics_file.read().rstrip('\n')
-            print lyrics
+            print(lyrics)
             os.remove(self.file_path)
         except (IndexError, OSError):
-            print "Ah jeez, I ran out of songs :( \nRun getsongs.py to repopulate lyric stash."
+            print("Ah jeez, I ran out of songs :( \nRun getsongs.py to repopulate lyric stash.")
 
     @classmethod
     def run(cls):

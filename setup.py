@@ -11,6 +11,7 @@ requirements = [
 ]
 
 setup_args = {
+    'python_requires': '>3.5.2',
     'name': 'lastfm-cli-tools',
     'version': '0.1.0',
 

@@ -1,6 +1,6 @@
 import os
 import json
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 import subprocess
 from config.config import Config
 from config.set_username import SetUsername
@@ -19,7 +19,7 @@ class SingThis:
                        "{user}&limit=1&api_key={api_key}&format=json".format(user=self.username,api_key=self.api_key)
 
     def get_song(self):
-        response = json.loads(urllib2.urlopen(self.api_url).read())
+        response = json.loads(urllib.request.urlopen(self.api_url).read())
         if response.get("message"):
             raise Exception(response.get("message"))
         track_name = response.get("recenttracks").get("track")[0].get("name")\
@@ -36,16 +36,16 @@ class SingThis:
     def run(cls):
         sing_this = SingThis()
         try:
-            print sing_this.get_song()
+            print(sing_this.get_song())
         except UnicodeEncodeError:
             import unicodedata
             import sys
             reload(sys)
             sys.setdefaultencoding("utf-8")
-            nkfd_form = unicodedata.normalize('NFKD', unicode(sing_this.get_song()))
-            print u"".join([c for c in nkfd_form if not unicodedata.combining(c)])
-        except Exception, e:
-            print e.message
+            nkfd_form = unicodedata.normalize('NFKD', str(sing_this.get_song()))
+            print("".join([c for c in nkfd_form if not unicodedata.combining(c)]))
+        except Exception as e:
+            print(e.message)
 
 
 if __name__ == '__main__':

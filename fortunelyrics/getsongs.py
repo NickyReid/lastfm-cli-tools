@@ -1,5 +1,7 @@
 import json
-import urllib2
+import urllib.request
+import urllib.error
+import urllib.parse
 import sys
 import subprocess
 import random
@@ -67,7 +69,7 @@ class SongGetter:
         return new_file_name
 
     def get_random_song(self):
-        response = json.loads(urllib2.urlopen(self.api_url).read())
+        response = json.loads(urllib.request.urlopen(self.api_url).read())
         tracks = response.get("lovedtracks").get("track") if self.loved_or_top == 0 else response.get("toptracks").get("track")
         track_name, track_artist = self.pick_song_from_list(tracks)
         bash_command = "songtext -t '" + track_name + "' -a '" + track_artist + "'"
@@ -86,15 +88,17 @@ class SongGetter:
         try:
             song = self.get_random_song()
             song_lyrics = subprocess.check_output(['bash', '-c', song])
-            if "Instrumental" in song_lyrics or song_lyrics.isspace() or len(song_lyrics) < 30:
+            song_lyrics = song_lyrics
+            if "Instrumental" in song_lyrics.decode("utf-8") or song_lyrics.decode("utf-8").isspace() or \
+                    len(song_lyrics.decode("utf-8")) < 30:
                 return self.get_lyrics()
             else:
                 return song_lyrics
-        except (subprocess.CalledProcessError, TypeError):
+        except (subprocess.CalledProcessError, TypeError) as e:
             return self.get_lyrics()
 
     def write_file(self, song_lyrics):
-        lines = song_lyrics.splitlines()
+        lines = song_lyrics.decode("utf-8").splitlines()
         random_line_number = random.randint(0, len(lines))
         stanza_to_write = ""
         for i in range(random_line_number+2, random_line_number+7):
@@ -108,7 +112,7 @@ class SongGetter:
             pass
         else:
             self.lyrics_file = open(self.new_file_name, 'ab+')
-            self.lyrics_file.write(stanza_to_write)
+            self.lyrics_file.write(stanza_to_write.encode("utf-8"))
             self.lyrics_file.close()
             if os.path.getsize(self.new_file_name) < 1:
                 os.remove(self.new_file_name)
@@ -138,7 +142,7 @@ class SongGetter:
             job.join()
 
         end_time = datetime.now()
-        print "(took {time} seconds)".format(time=(end_time - start_time).seconds)
+        print("(took {time} seconds)".format(time=(end_time - start_time).seconds))
 
 
 if __name__ == '__main__':

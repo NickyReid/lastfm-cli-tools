@@ -16,7 +16,7 @@ def go():
 class LastHop:
 
     def __init__(self, username, real_name, join_date, total_tracks):
-        self.timezone_diff = 0
+        self.timezone_diff = self.get_timezone_diff()
         self.join_date = join_date.date()
         self.stats_date = datetime.today()
         self.username = username
@@ -27,6 +27,25 @@ class LastHop:
         self.file_path = os.path.dirname(os.path.realpath(__file__)) + '/users/{username}'.format(username=username)
         if not os.path.exists(self.file_path):
             os.makedirs(self.file_path)
+
+    @staticmethod
+    def get_timezone_diff():
+        """
+        Get difference in hours from UTC timezone. Daylight savings makes this variable.
+        :return: Timezone diff in hours
+        """
+        return datetime.now().hour - datetime.utcnow().hour
+
+    def get_date_filename(self, date):
+        """
+        Get file name for given day
+        """
+
+        if isinstance(date, datetime):
+            date = date.date()
+        print(type(date))
+        # print( "{path}/{date}.csv".format(path=self.file_path, date=date))
+        return "{path}/{date}.csv".format(path=self.file_path, date=date)
 
     def user_stats(self):
         print("{user} has been on Last.fm for {years} years " \
@@ -43,16 +62,16 @@ class LastHop:
         print("- - - - - - - - - - Most Played Artists - - - - - - - - - -")
         self.yearly_most_played_artists()
         print("\n- - - - - - - - - Played around this time - - - - - - - - -")
-        self.yearly_around_this_time()
+        # self.yearly_around_this_time()
         print("\n- - - - - - - - - - - All Artists  - - - - - - - - - - - - -")
-        self.yearly_all_artists()
+        # self.yearly_all_artists()
         print("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -")
-        if self.stats_date.date() == datetime.today().date() and datetime.today().time().hour < 2:
-            try:
-                day_file_path = "{path}/{date}".format(path=self.file_path, date=self.stats_date)
-                os.remove(day_file_path)
-            except OSError:
-                pass
+        # if self.stats_date.date() == datetime.today().date() and datetime.today().time().hour < 2:
+        #     try:
+        #         day_file_path = self.get_date_filename(self.stats_date.date())
+        #         os.remove(day_file_path)
+        #     except OSError:
+        #         pass
 
     def process_day(self, date):
         """
@@ -61,7 +80,8 @@ class LastHop:
         :param prev: Is this the day before? Used for timezone difference. I know it's hideous.
         :return: dictionary of artist and track information
         """
-        today_file_path = "{path}/{date}".format(path=self.file_path, date=date)
+        today_file_path = self.get_date_filename(date.date())
+        print(today_file_path)
         tracks_and_dates_list = []
         page = 1
         date_start = date.replace(hour=0).replace(minute=0).replace(second=0).replace(microsecond=0)
@@ -89,6 +109,7 @@ class LastHop:
 
         num_pages = math.ceil(total_track_count / 200)
         tracks_and_dates = []
+        artist_track_date_map = {}
         if num_pages > 1:
             for page_num in range(2, num_pages + 1):
                 api_url = f"http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks" \
@@ -102,59 +123,80 @@ class LastHop:
                 response = requests.get(api_url).json()
                 recenttracks.append(response.get("recenttracks", {}).get("track"))
         for track in recenttracks:
-            tracks_and_dates.append(f"{track.get('artist', {}).get('#text')} - {track.get('name')}: "
-                                    f"[{track.get('date', {}).get('#text', datetime.now())}]")
-        print(tracks_and_dates)
+            artist = track.get('artist', {}).get('#text').replace(",", "")
+            title = track.get('name').replace(",", "")
+            play_date = track.get('date', {}).get('#text', datetime.now())
+            play_date_datetime = datetime.strptime(play_date, "%d %b %Y, %H:%M")
+            play_date_formatted = play_date_datetime.strftime("%Y/%m/%d %H:%M:%S")
 
-        while True:  # paging
-            response = requests.get(api_url).json()
-            if response.get("recenttracks", {}).get("total", 0) < 1:
-                break
+            with open(today_file_path, 'w+') as stats_file:
+                stats_file.write(f"{artist},{title},{play_date_formatted}")
+            # today_file = open(today_file_path, 'w+')
+            # for key in artist_dict:
+            #     today_file.write("{track}: {date}\n".format(track=key, date=artist_dict.get(key)))
+            # today_file.close()
+            # if artist_track_date_map.get()
+            # tracks_and_dates.append(f"{artist} - {title}: m[{play_date}]")
+        # print(tracks_and_dates)
+        #
+        # if artist_dict.get(tracks_and_dates[i]):
+        #     date_list = artist_dict.get(tracks_and_dates[i])
+        #     date_list.append(tracks_and_dates[i + 1])
+        #     artist_dict[tracks_and_dates[i]] = date_list
+        # else:
+        #     artist_dict[tracks_and_dates[i]] = [tracks_and_dates[i + 1]]
+        # tracks_and_dates_list.append({"track": tracks_and_dates[i], "date": tracks_and_dates[i + 1]})
 
 
-        url = '{user_profile}?rangetype=1day&from={date}&page={page}'.format(user_profile=self.user_profile,
-                                                                             date=date,
-                                                                             page=str(page))
-        artist_dict = {}
-        tracks_and_dates = []
-        while True:  # paging
-            response = requests.get(url)
-            if response.url != url:
-                break
-
-            if "didn't scrobble anything" in response.content:
-                today_file = open(today_file_path, 'w+')
-                today_file.write("0")
-                today_file.close()
-                return []
-            lines = response.content.split('title="')[1:]
-            tracks_and_dates = []
-            for line in lines:
-                l = line.split('">')[0].split("\n")[0]
-                if l[0] is not " ":
-                    tracks_and_dates.append(l.replace('"', '').replace('&amp;', '&'))
-            for i in range(0, len(tracks_and_dates)):
-                if '\xe2\x80\x94' in tracks_and_dates[i]:
-                    if (datetime.strptime(tracks_and_dates[i + 1], '%A %d %b %Y, %I:%M%p').time().hour > 21 and
-                            self.stats_date.date().day == date.day):
-                        continue
-                    else:
-                        if artist_dict.get(tracks_and_dates[i]):
-                            date_list = artist_dict.get(tracks_and_dates[i])
-                            date_list.append(tracks_and_dates[i + 1])
-                            artist_dict[tracks_and_dates[i]] = date_list
-                        else:
-                            artist_dict[tracks_and_dates[i]] = [tracks_and_dates[i + 1]]
-                        tracks_and_dates_list.append({"track": tracks_and_dates[i], "date": tracks_and_dates[i + 1]})
-            page += 1
-            url = '{user_profile}?rangetype=1day&from={date}&page={page}'.format(user_profile=self.user_profile,
-                                                                                 date=date,
-                                                                                 page=str(page))
-        today_file = open(today_file_path, 'w+')
-        for key in artist_dict:
-            today_file.write("{track}: {date}\n".format(track=key, date=artist_dict.get(key)))
-        today_file.close()
-        return artist_dict
+        # while True:  # paging
+        #     response = requests.get(api_url).json()
+        #     if response.get("recenttracks", {}).get("total", 0) < 1:
+        #         break
+        #
+        #
+        # url = '{user_profile}?rangetype=1day&from={date}&page={page}'.format(user_profile=self.user_profile,
+        #                                                                      date=date,
+        #                                                                      page=str(page))
+        # artist_dict = {}
+        # tracks_and_dates = []
+        # while True:  # paging
+        #     response = requests.get(url)
+        #     if response.url != url:
+        #         break
+        #
+        #     if "didn't scrobble anything" in response.content:
+        #         today_file = open(today_file_path, 'w+')
+        #         today_file.write("0")
+        #         today_file.close()
+        #         return []
+        #     lines = response.content.split('title="')[1:]
+        #     tracks_and_dates = []
+        #     for line in lines:
+        #         l = line.split('">')[0].split("\n")[0]
+        #         if l[0] is not " ":
+        #             tracks_and_dates.append(l.replace('"', '').replace('&amp;', '&'))
+        #     for i in range(0, len(tracks_and_dates)):
+        #         if '\xe2\x80\x94' in tracks_and_dates[i]:
+        #             if (datetime.strptime(tracks_and_dates[i + 1], '%A %d %b %Y, %I:%M%p').time().hour > 21 and
+        #                     self.stats_date.date().day == date.day):
+        #                 continue
+        #             else:
+        #                 if artist_dict.get(tracks_and_dates[i]):
+        #                     date_list = artist_dict.get(tracks_and_dates[i])
+        #                     date_list.append(tracks_and_dates[i + 1])
+        #                     artist_dict[tracks_and_dates[i]] = date_list
+        #                 else:
+        #                     artist_dict[tracks_and_dates[i]] = [tracks_and_dates[i + 1]]
+        #                 tracks_and_dates_list.append({"track": tracks_and_dates[i], "date": tracks_and_dates[i + 1]})
+        #     page += 1
+        #     url = '{user_profile}?rangetype=1day&from={date}&page={page}'.format(user_profile=self.user_profile,
+        #                                                                          date=date,
+        #                                                                          page=str(page))
+        # today_file = open(today_file_path, 'w+')
+        # for key in artist_dict:
+        #     today_file.write("{track}: {date}\n".format(track=key, date=artist_dict.get(key)))
+        # today_file.close()
+        # return artist_dict
 
     def write_day_file(self, date):
         """
@@ -162,7 +204,7 @@ class LastHop:
         :param date:
         :return:
         """
-        day_file_path = "{path}/{date}".format(path=self.file_path, date=date)
+        day_file_path = self.get_date_filename(date.date())
         open(day_file_path, 'ab+').close()
         if (not os.path.getsize(day_file_path) > 0 or date == datetime.today() or
                 (date == datetime.today() - relativedelta(days=1) and
@@ -177,7 +219,8 @@ class LastHop:
         date = self.stats_date
         if year:
             date = date.replace(year=year)
-        day_file_path = "{path}/{date}".format(path=self.file_path, date=date)
+        day_file_path = self.get_date_filename(date.date())
+        day_file_path = "{path}/{date}.csv".format(path=self.file_path, date=date.date())
         try:
             open(day_file_path, 'r+')
         except IOError:
@@ -190,14 +233,14 @@ class LastHop:
                 self.write_day_file(date)
             else:
                 day_before = date - relativedelta(days=1)
-                day_before_file_path = "{path}/{date}".format(path=self.file_path, date=day_before)
+                day_before_file_path = self.get_date_filename(day_before)
                 try:
                     open(day_file_path, 'r+')
                 except IOError:
                     new_day = True
                 try:
                     open(day_before_file_path, 'r+')
-                except IOError:
+                except Exception:
                     new_day = True
                     self.write_day_file(date)
                 if new_day:
@@ -223,7 +266,8 @@ class LastHop:
         return track_dict
 
     def most_played_artist(self, date):
-        day_file_path = "{path}/{date}".format(path=self.file_path, date=date)
+        day_file_path = self.get_date_filename(date)
+        # print(day_file_path)
         today_file = open(day_file_path, 'r+')
         track_dict = {}
         artists = {}
@@ -276,7 +320,9 @@ class LastHop:
         return "{h}:{m}".format(h=hours, m=min)
 
     def around_this_time(self, date):
-        day_file_path = "{path}/{date}".format(path=self.file_path, date=date)
+        day_file_path = self.get_date_filename(date)
+        # print(day_file_path)
+        # day_file_path = "{path}/{date}.csv".format(path=self.file_path, date=date.day())
         day_file = open(day_file_path, "r+")
         times = {}
         now = self.stats_date
@@ -382,7 +428,7 @@ class LastHop:
                     if datetime.strptime(time.lstrip().rstrip(), '%A %d %b %Y, %I:%M%p').time().hour \
                             >= (24 - self.timezone_diff):
                         late_night_songs[song].append(time)
-        day_file_path = "{path}/{date}".format(path=self.file_path, date=date)
+        day_file_path = self.get_date_filename(date)
         day_file = open(day_file_path, 'a+')
         for song in late_night_songs:
             if len(late_night_songs.get(song)) > 0:
@@ -392,7 +438,7 @@ class LastHop:
         return late_night_songs
 
     def all_artists_that_day(self, date):
-        day_file_path = "{path}/{date}".format(path=self.file_path, date=date)
+        day_file_path = self.get_date_filename(date.date())
         day_file = open(day_file_path, "r+")
         track_dict = {}
         artists = {}

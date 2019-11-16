@@ -7,7 +7,6 @@ requirements = [
     'requests==2.21.0',
     'songtext==0.1.9',
     'profanity',
-    'bs4'
 ]
 
 setup_args = {

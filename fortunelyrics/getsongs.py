@@ -7,10 +7,10 @@ import subprocess
 import random
 import os
 import multiprocessing
-from config.config import Config
+from shared.config import Config
 from profanity import profanity
 from datetime import datetime
-from config.set_username import SetUsername
+from shared.set_username import SetUsername
 
 
 def go():
@@ -88,7 +88,6 @@ class SongGetter:
         try:
             song = self.get_random_song()
             song_lyrics = subprocess.check_output(['bash', '-c', song])
-            song_lyrics = song_lyrics
             if "Instrumental" in song_lyrics.decode("utf-8") or song_lyrics.decode("utf-8").isspace() or \
                     len(song_lyrics.decode("utf-8")) < 30:
                 return self.get_lyrics()

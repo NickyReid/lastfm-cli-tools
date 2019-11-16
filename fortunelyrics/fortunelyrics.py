@@ -1,6 +1,6 @@
 import os
 import random
-from config.config import Config
+from shared.config import Config
 
 
 def go():

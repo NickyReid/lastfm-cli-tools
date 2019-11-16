@@ -36,11 +36,6 @@ class RawFileWriter:
         self.stats_end_date = end_date
         self.interval = interval
         self.include_lyrics = include_lyrics
-        print(f"Stats start date: {self.stats_start_date.date()}")
-        print(f"Stats end date: {self.stats_end_date.date()}")
-        print(f"Stats interval: {self.interval}")
-        print(f"Include lyrics: {self.include_lyrics}")
-
         self.username = lastfm_username
         self.api_key = Config.API_KEY
         self.timezone_diff = self.get_timezone_diff()
@@ -86,7 +81,6 @@ class RawFileWriter:
         raw_file_name = self.get_raw_filename_for_date(date)
         if not self.file_needs_to_be_written(raw_file_name, date):
             return
-        print(f'STARTING writing raw file for {date.date()}')
         raw_data = self.get_lastfm_tracks_for_day(date)
         with open(raw_file_name, "w+") as file:
             if not raw_data:
@@ -103,7 +97,6 @@ class RawFileWriter:
                         lyrics = self.get_lyrics_for_track(title, artist)
                         line["lyrics"] = lyrics
                 file.write(json.dumps(raw_data))
-        print(f"FINISHED writing raw file for {date.date()}")
 
     def get_lyrics_for_track(self, title: str, artist: str) -> str or None:
         """

@@ -133,9 +133,12 @@ class StatsCompiler:
         return result
 
     def all_artists_for_date(self, date):
-        day_data_dict = self.yearly_data_dict.get(date)
-        # if day_data_dict:
-        #     artist
+        artist_playcount_dict = self.get_artist_playcount_dict_for_date(date)
+        if artist_playcount_dict:
+            print(f"* - {date.year} - *")
+            for artist in sorted(artist_playcount_dict, key=artist_playcount_dict.__getitem__, reverse=True):
+                print("\t{artist}: {plays}".format(artist=artist.replace('&#39;', '`'),
+                                                   plays=artist_playcount_dict.get(artist)))
 
     def most_played_artists(self):
         days = self.get_list_of_dates()
@@ -220,6 +223,7 @@ class StatsPresenter:
             if most_played:
                 print(most_played)
         print("- - - - - - - - - - - - - All Artists - - - - - - - - - - - - - - -")
+        self.stats_compiler.all_artists()
 
 
 class Lasthop:

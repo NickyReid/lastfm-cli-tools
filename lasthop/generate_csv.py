@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from shared.config import Config
 
 STATS_END_DATE = datetime.today()
-CUSTOM_START_DATE = False
+CUSTOM_START_DATE = False  # datetime.today() - timedelta(days=31)
 
 
 class CSVWriter:

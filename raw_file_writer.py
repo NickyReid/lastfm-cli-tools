@@ -1,7 +1,6 @@
 """
 Get data from Last.fm api and save to disk
 """
-import time
 import os
 import json
 import math
@@ -57,22 +56,25 @@ class RawFileWriter:
         """
         Use multiprocessing to fetch listening data for time range
         """
-        jobs = []
+        list_of_days = self.get_list_of_dates()
+        pool = multiprocessing.Pool()
+        for day in list_of_days:
+            pool.apply_async(self.write_raw_file_for_day, args=(day,))
+        pool.close()
+        pool.join()
+
+    def get_list_of_dates(self):
+        days = []
         day = self.stats_end_date
-        while True:
-            if day < self.stats_start_date:
-                break
-            job = multiprocessing.Process(target=self.write_raw_file_for_day, args=(day,))
-            jobs.append(job)
-            job.start()
+        while day >= self.stats_start_date:
+            days.append(day)
             if self.interval == Interval.YEAR.value:
                 day = day - relativedelta(years=1)
             elif self.interval == Interval.DAY.value:
                 day = day - timedelta(days=1)
             else:
                 raise ValueError(f"{self.interval} is not a valid interval")
-        for job in jobs:
-            job.join()
+        return days
 
     def write_raw_file_for_day(self, date: datetime):
         """
@@ -84,7 +86,7 @@ class RawFileWriter:
         raw_file_name = self.get_raw_filename_for_date(date)
         if not self.file_needs_to_be_written(raw_file_name, date):
             return
-        print(f'starting {date}')
+        print(f'STARTING writing raw file for {date.date()}')
         raw_data = self.get_lastfm_tracks_for_day(date)
         with open(raw_file_name, "w+") as file:
             if not raw_data:
@@ -93,13 +95,17 @@ class RawFileWriter:
                 for line in raw_data:
                     artist = line.get('artist', {}).get('#text')
                     title = line.get('name')
+                    if "[live]" in title.lower():
+                        title = title.replace("[live]", "")
+                    elif "(live)" in title.lower():
+                        title = title.replace("(live", "")
                     if self.include_lyrics:
                         lyrics = self.get_lyrics_for_track(title, artist)
                         line["lyrics"] = lyrics
                 file.write(json.dumps(raw_data))
-        print(f"Finished writing raw file for {date.date()}")
+        print(f"FINISHED writing raw file for {date.date()}")
 
-    def get_lyrics_for_track(self, title: str, artist: str) -> str:
+    def get_lyrics_for_track(self, title: str, artist: str) -> str or None:
         """
         Get song lyrics from Songtext api and write to file. If lyrics have been saved previously, return lyrics from
         file.
@@ -109,15 +115,20 @@ class RawFileWriter:
         """
         lyric_file_name = self.get_lyrics_file_name(artist, title)
         if os.path.exists(lyric_file_name):
+            print(f"Got  {artist} - {title}  from cache")
             with open(lyric_file_name, "r+") as file:
                 song_lyrics = file.read()
         else:
-            bash_command = f"songtext -t '{title}' -a '{artist}'"
+            stripped_title = title.replace('"', "'")
+            stripped_artist = artist.replace('"', "'")
+            bash_command = f'songtext -t "{stripped_title}" -a "{stripped_artist}"'
             try:
                 song_lyrics = subprocess.check_output(['bash', '-c', bash_command])
                 print(f"Success fetching {artist} - {title} lyrics from api")
                 if isinstance(song_lyrics, bytes):
                     song_lyrics = song_lyrics.decode("utf-8")
+            except requests.exceptions.ConnectionError:
+                return None
             except Exception:
                 song_lyrics = "null"
             if "Instrumental" in song_lyrics:
@@ -151,8 +162,6 @@ class RawFileWriter:
                   f"&limit=200" \
                   f"&page={page_num}" \
                   f"&format=json"
-        print(api_url)
-        time.sleep(1)
         response = requests.get(api_url).json()
         return response
 

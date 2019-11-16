@@ -1,15 +1,14 @@
 import os
-import csv
 import json
 import math
 import requests
+import subprocess
 import multiprocessing
 from datetime import datetime, timedelta
 from config.set_username import SetUsername
 from config.config import Config
 
-STATS_DATE_ANCHOR = datetime.today() - timedelta(days=1)
-# STATS_DATE_ANCHOR = datetime.today()
+STATS_END_DATE = datetime.today()
 
 
 class UserData:
@@ -26,7 +25,8 @@ class UserData:
 
         return {
             "username": self.username,
-            "join_date": datetime.fromtimestamp(float(api_response.get("user").get("registered").get("unixtime"))),
+            # "join_date": datetime.fromtimestamp(float(api_response.get("user").get("registered").get("unixtime"))),
+            "join_date": datetime.today() - timedelta(days=2),
             "real_name": api_response.get("user").get("realname"),
             "total_tracks": api_response.get("user").get("playcount")
         }
@@ -41,12 +41,17 @@ class FileWriter:
             lastfm_join_date = lastfm_user_data.get("join_date")
         self.username = lastfm_username
         self.join_date = lastfm_join_date
+        print(f"Join date {self.join_date}")
         self.api_key = Config.API_KEY
         self.timezone_diff = self.get_timezone_diff()
         self.file_path = os.path.dirname(os.path.realpath(__file__)) + '/users/{username}'.format(
             username=self.username)
         if not os.path.exists(self.file_path):
             os.makedirs(self.file_path)
+        self.lyrics_file_path = os.path.dirname(os.path.realpath(__file__)) + '/users/{username}/lyricsstore'.format(
+            username=self.username)
+        if not os.path.exists(self.lyrics_file_path):
+            os.makedirs(self.lyrics_file_path)
 
     def get_lastfm_user_data(self):
         api_url = f"http://ws.audioscrobbler.com/2.0/?method=user.getinfo" \
@@ -62,18 +67,19 @@ class FileWriter:
         }
 
     def process_data_for_all_days(self):
-        days = self.get_list_of_dates()
         jobs = []
-        for day in days:
-            job = multiprocessing.Process(target=self.write_raw_file_and_formatted_file_for_day, args=(day,))
+        day = STATS_END_DATE
+        while True:
+            print(f"day - {day}")
+            if day < self.join_date:
+                break
+            job = multiprocessing.Process(target=self.write_raw_file_for_day, args=(day,))
             jobs.append(job)
             job.start()
+            day = day - timedelta(days=1)
         for job in jobs:
             job.join()
-
-    def write_raw_file_and_formatted_file_for_day(self, day):
-        self.write_raw_file_for_day(day)
-        self.write_formatted_file_for_day(day)
+        self.write_formatted_file_for_all_days()
 
     def write_raw_files_for_each_day(self):
         days = self.get_list_of_dates()
@@ -87,7 +93,7 @@ class FileWriter:
             job.join()
 
     def get_list_of_dates(self):
-        date_to_process = STATS_DATE_ANCHOR
+        date_to_process = STATS_END_DATE
         days = []
         while date_to_process >= self.join_date:
             days.append(date_to_process)
@@ -103,37 +109,54 @@ class FileWriter:
             result = file.read()
         return result
 
-    def write_formatted_files_for_all_days(self):
-        for day in self.get_list_of_dates():
-            self.write_formatted_file_for_day(date=day)
+    # def write_formatted_files_for_all_days(self):
+    #     for day in self.get_list_of_dates():
+    #         self.write_formatted_file_for_day(date=day)
 
-    def write_formatted_file_for_day(self, date):
-        formatted_file_name = self.get_formatted_filename_for_date(date)
-        if not self.file_needs_to_be_written(formatted_file_name, date):
-            return
-
-        raw_file_name = self.get_raw_filename_for_date(date)
-        with open(raw_file_name, "r+") as file:
-            raw_data = file.read()
-        json_data = json.loads(raw_data)
-
+    def write_formatted_file_for_all_days(self):
+        formatted_file_name = self.get_formatted_filename()
+        day = STATS_END_DATE
         with open(formatted_file_name, "w+") as file:
-            if not json_data:
-                file.write("0")
-                return
-            for line in json_data:
-                if isinstance(line, dict):
-                    artist = line.get('artist', {}).get('#text').replace("|", "")
-                    title = line.get('name').replace(",", "")
-                    play_date = line.get('date', {}).get('#text', (datetime.now() - timedelta(
-                        hours=self.timezone_diff)).strftime("%d %b %Y, %H:%M"))
-                    play_date_datetime = datetime.strptime(play_date, "%d %b %Y, %H:%M") + timedelta(
-                        hours=self.timezone_diff)
-                    play_date_formatted = play_date_datetime.strftime("%Y/%m/%d %H:%M:%S")
-                    line_to_write = f"{artist}|{title}|{play_date_formatted}"
-                    file.write(line_to_write + "\n")
+            file.write("Year|Month|Weekday|Date|Artist name|Album name|Song title|Lyrics\n")
+            while True:
+                if day < self.join_date:
+                    break
+                raw_file_name = self.get_raw_filename_for_date(day)
+                with open(raw_file_name, "r+") as raw_file:
+                    raw_data = raw_file.read()
+                    json_data = json.loads(raw_data)
+                    if not json_data:
+                        day = day - timedelta(days=1)
+                        continue
+                    for line in json_data:
+                        if isinstance(line, dict):
+                            artist = line.get('artist', {}).get('#text').replace("|", "")
+                            title = line.get('name').replace("|", "")
+                            album = line.get('album', {}).get('#text').replace("|", "")
+                            play_date = line.get('date', {}).get('#text', (datetime.now() - timedelta(
+                                hours=self.timezone_diff)).strftime("%d %b %Y, %H:%M"))
+                            play_date_datetime = datetime.strptime(play_date, "%d %b %Y, %H:%M") + timedelta(
+                                hours=self.timezone_diff)
+
+                            play_date_formatted = (play_date_datetime.date()).strftime("%Y/%m/%d")
+                            day_list = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+                            lyrics = line.get("lyrics")
+                            line_to_write = f"{play_date_datetime.year}|" \
+                                            f"{play_date_datetime.month}|" \
+                                            f"{day_list[play_date_datetime.weekday()]}|" \
+                                            f"{play_date_formatted}|" \
+                                            f"{artist}|" \
+                                            f"{album}|" \
+                                            f"{title}|" \
+                                            f"{lyrics}" \
+
+                            file.write(line_to_write + "\n")
+                    print(f"Processed {raw_file_name}")
+                print(f"wrote {formatted_file_name}")
+                day = day - timedelta(days=1)
 
     def write_raw_file_for_day(self, date):
+        print(f"Writing raw file for {date}")
         raw_file_name = self.get_raw_filename_for_date(date)
         if not self.file_needs_to_be_written(raw_file_name, date):
             return
@@ -143,7 +166,45 @@ class FileWriter:
             if not raw_data:
                 file.write("0")
             else:
+                for line in raw_data:
+                    artist = line.get('artist', {}).get('#text')
+                    title = line.get('name')
+                    lyrics = self.get_lyrics_for_track(title, artist)
+                    line["lyrics"] = lyrics
                 file.write(json.dumps(raw_data))
+        print(f"Finished writing raw file for {date}")
+
+    def get_lyrics_for_track(self, title, artist):
+        lyric_file_name = self.get_lyrics_file_name(artist, title)
+        if os.path.exists(lyric_file_name):
+            print(f"getting lyrics from store")
+            with open(lyric_file_name, "r+") as file:
+                song_lyrics = file.read()
+        else:
+            print(f"Fetching lyrics from api")
+            bash_command = f"songtext -t '{title}' -a '{artist}'"
+            try:
+                song_lyrics = subprocess.check_output(['bash', '-c', bash_command])
+                print(f"Success fetching lyrics from api")
+                if isinstance(song_lyrics, bytes):
+                    song_lyrics = song_lyrics.decode("utf-8")
+            except:
+                print(f"Error fetching lyrics from api")
+                song_lyrics = "null"
+            if "Instrumental" in song_lyrics:
+                song_lyrics = "Instrumental"
+            elif song_lyrics.isspace() or len(song_lyrics) < 1:
+                song_lyrics = "null"
+            else:
+                song_lines = song_lyrics.split("\n")
+                for line in song_lines:
+                    print(f"line {line}")
+                if len(song_lines) > 2:
+                    title_removed = song_lines[3:]
+                    song_lyrics = " ".join(title_removed)
+            with open(lyric_file_name, "w+") as file:
+                file.write(song_lyrics)
+        return song_lyrics
 
     def lastfm_api_query(self, date, page_num):
         date_start = date.replace(hour=0).replace(minute=0).replace(second=0).replace(microsecond=0)
@@ -190,9 +251,13 @@ class FileWriter:
         date_string = datetime.strftime(date, "%Y-%m-%d")
         return f"{self.file_path}/{date_string}raw.txt"
 
-    def get_formatted_filename_for_date(self, date):
-        date_string = datetime.strftime(date, "%Y-%m-%d")
-        return f"{self.file_path}/{date_string}.csv"
+    def get_lyrics_file_name(self, artist, title):
+        artist_track_string = f"{artist}{title}"
+        artist_track_string = ''.join(e for e in artist_track_string if e.isalnum())[:35]
+        return f"{self.lyrics_file_path}/{artist_track_string}.txt"
+
+    def get_formatted_filename(self):
+        return f"{self.file_path}/lastfmstats.csv"
 
     def get_filename_for_date(self, date):
         date_string = datetime.strftime(date, "%Y-%m-%d")
@@ -218,123 +283,6 @@ class FileWriter:
         return not (file_exists and not file_is_today)
 
 
-class StatsCompiler:
-    def __init__(self, lastfm_username=None, lastfm_join_date=None):
-        if not lastfm_username or not lastfm_join_date:
-            lastfm_user_data = UserData().get_lastfm_user_data()
-            lastfm_username = lastfm_user_data.get("username")
-            lastfm_join_date = lastfm_user_data.get("join_date")
-        self.username = lastfm_username
-        self.join_date = lastfm_join_date
-        self.file_path = os.path.dirname(os.path.realpath(__file__)) + '/users/{username}'.format(
-            username=self.username)
-        if not os.path.exists(self.file_path):
-            print(f"No data found for {self.username}")
-        self.yearly_data_dict = self.compile_stats()
-
-    def compile_stats(self):
-        days = self.get_list_of_dates()
-        yearly_data_dict = {}
-        for day in days:
-            yearly_data_dict[day] = self.read_file_for_day(day)
-        return yearly_data_dict
-
-    def all_artists(self):
-        days = self.get_list_of_dates()
-        result = []
-        for day in days:
-            result.append(self.all_artists_for_date(day))
-        return result
-
-    def all_artists_for_date(self, date):
-        day_data_dict = self.yearly_data_dict.get(date)
-        # if day_data_dict:
-        #     artist
-
-    def most_played_artists(self):
-        days = self.get_list_of_dates()
-        result = []
-        for day in days:
-            result.append(self.most_played_artist_for_date(day))
-        return result
-
-    def most_played_artist_for_date(self, date):
-        artist_playcount_dict = self.get_artist_playcount_dict_for_date(date)
-        if artist_playcount_dict:
-            highest_playcount = max(artist_playcount_dict, key=artist_playcount_dict.get)
-            day_list = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-            count = artist_playcount_dict.get(highest_playcount)
-            artist = highest_playcount.split("|")[0]
-            return f"{date.year} ({day_list[date.weekday()]}): {artist} ({count})"
-
-    def get_artist_playcount_dict_for_date(self, date):
-        day_data_dict = self.yearly_data_dict.get(date)
-        artist_playcount_dict = {}
-        if day_data_dict:
-            for entry in day_data_dict:
-                artist_name = entry.split("|")[0]
-                if not artist_playcount_dict.get(artist_name):
-                    artist_playcount_dict[artist_name] = 1
-                else:
-                    artist_playcount_dict[artist_name] += 1
-        return artist_playcount_dict
-
-    def read_file_for_day(self, day):
-        track_time_stamp_dict = {}
-        with open(self.get_filename_for_date(day), "r+") as csv_file:
-            csv_reader = csv.reader(csv_file, delimiter='|')
-            for row in csv_reader:
-                if row[0] == "0":
-                    break
-                artist = row[0]
-                title = row[1]
-                timestamp = row[2]
-                artist_track = f"{artist} | {title}"
-                if not track_time_stamp_dict.get(artist_track):
-                    track_time_stamp_dict[artist_track] = [timestamp]
-                else:
-                    timestamp_list = track_time_stamp_dict.get(artist_track)
-                    timestamp_list.append(timestamp)
-                    track_time_stamp_dict[artist_track] = timestamp_list
-        return track_time_stamp_dict
-
-    def get_list_of_dates(self):
-        date_to_process = STATS_DATE_ANCHOR
-        days = []
-        while date_to_process >= self.join_date:
-            days.append(date_to_process)
-            date_to_process = date_to_process.replace(year=date_to_process.year-1)
-        return days
-
-    def get_filename_for_date(self, date):
-        date_string = datetime.strftime(date, "%Y-%m-%d")
-        return f"{self.file_path}/{date_string}.csv"
-
-
-class StatsPresenter:
-
-    def __init__(self, lastfm_user_data):
-        self.user_data = lastfm_user_data
-        self.join_date = self.user_data.get("join_date")
-        self.total_tracks = int(self.user_data.get("total_tracks"))
-        self.avg_daily_tracks = int(self.total_tracks / (STATS_DATE_ANCHOR - self.join_date).days)
-        self.stats_compiler = StatsCompiler(self.user_data.get("username"))
-
-    def present(self):
-        intro = f"\n{self.user_data.get('real_name')} has been on Last.fm for " \
-                f"{(STATS_DATE_ANCHOR.year - self.join_date.year)} years.\n" \
-                f"They've played {self.user_data.get('total_tracks')} tracks.\n" \
-                f"That's an average of {self.avg_daily_tracks} track{'s' if self.avg_daily_tracks > 1 else ''} per day." \
-                f"\n"
-        print(intro)
-        print(f"- - - - - - - - - - - - - {STATS_DATE_ANCHOR.strftime('%B %-d')} - - - - - - - - - - - - - -\n")
-        print("- - - - - - - - - - - Most Played Artists - - - - - - - - - - - -")
-        for most_played in self.stats_compiler.most_played_artists():
-            if most_played:
-                print(most_played)
-        print("- - - - - - - - - - - - - All Artists - - - - - - - - - - - - - - -")
-
-
 if __name__ == '__main__':
     start_time = datetime.now()
     user_data = UserData().get_lastfm_user_data()
@@ -344,7 +292,6 @@ if __name__ == '__main__':
     file_writer = FileWriter(username, join_date)
     file_writer.process_data_for_all_days()
 
-    StatsPresenter(user_data).present()
     print(f"\n(took {(datetime.now() - start_time).seconds} seconds)")
 
 

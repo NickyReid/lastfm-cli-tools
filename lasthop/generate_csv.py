@@ -22,7 +22,6 @@ class CSVWriter:
 
         self.username = lastfm_username
         self.stat_start_date = CUSTOM_START_DATE if CUSTOM_START_DATE else lastfm_join_date
-        self.api_key = Config.API_KEY
         self.timezone_diff = self.get_timezone_diff()
         self.raw_data_path = f"{Config.RAW_DATA_PATH}/users/{self.username}"
         self.file_path = os.path.dirname(os.path.realpath(__file__)) + '/users/{username}'.format(

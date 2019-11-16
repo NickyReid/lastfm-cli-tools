@@ -4,36 +4,13 @@ Year|Month|Weekday|Date|Artist name|Album name|Song title|Lyrics
 """
 import os
 import json
-import requests
 import raw_file_writer
 import lastfm_user_data as lud
 from datetime import datetime, timedelta
-from shared.set_username import SetUsername
 from shared.config import Config
 
 STATS_END_DATE = datetime.today()
-CUSTOM_START_DATE = datetime.today() - timedelta(days=4)
-
-
-class UserData:
-    def __init__(self):
-        self.api_key = Config.API_KEY
-        self.username = SetUsername.set_username()
-
-    def get_lastfm_user_data(self):
-        api_url = f"http://ws.audioscrobbler.com/2.0/?method=user.getinfo" \
-                  f"&user={self.username}" \
-                  f"&api_key={self.api_key}" \
-                  f"&format=json"
-        api_response = requests.get(api_url).json()
-
-        return {
-            "username": self.username,
-            # "join_date": datetime.fromtimestamp(float(api_response.get("user").get("registered").get("unixtime"))),
-            "join_date": datetime.today() - timedelta(days=2),
-            "real_name": api_response.get("user").get("realname"),
-            "total_tracks": api_response.get("user").get("playcount")
-        }
+CUSTOM_START_DATE = False
 
 
 class CSVWriter:
@@ -45,7 +22,6 @@ class CSVWriter:
 
         self.username = lastfm_username
         self.stat_start_date = CUSTOM_START_DATE if CUSTOM_START_DATE else lastfm_join_date
-        print(f"Start date {self.stat_start_date}")
         self.api_key = Config.API_KEY
         self.timezone_diff = self.get_timezone_diff()
         self.raw_data_path = f"{Config.RAW_DATA_PATH}/users/{self.username}"
@@ -102,9 +78,9 @@ class CSVWriter:
                                             f"{lyrics}" \
 
                             file.write(line_to_write + "\n")
-                    print(f"Processed {raw_file_name}")
-                print(f"wrote {formatted_file_name}")
+                    print(f"Finished processing {raw_file_name}")
                 day = day - timedelta(days=1)
+            print(f"Finished writing {formatted_file_name}")
 
     def get_raw_filename_for_date(self, date):
         date_string = datetime.strftime(date, "%Y-%m-%d")

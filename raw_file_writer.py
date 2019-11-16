@@ -36,8 +36,8 @@ class RawFileWriter:
         self.stats_end_date = end_date
         self.interval = interval
         self.include_lyrics = include_lyrics
-        print(f"Stats start date: {self.stats_start_date}")
-        print(f"Stats end date: {self.stats_end_date}")
+        print(f"Stats start date: {self.stats_start_date.date()}")
+        print(f"Stats end date: {self.stats_end_date.date()}")
         print(f"Stats interval: {self.interval}")
         print(f"Include lyrics: {self.include_lyrics}")
 
@@ -79,7 +79,7 @@ class RawFileWriter:
         from Songtext api.
         :param date: Day for which to get data for
         """
-        print(f"Writing raw file for {date}")
+        print(f'starting {date}')
         raw_file_name = self.get_raw_filename_for_date(date)
         if not self.file_needs_to_be_written(raw_file_name, date):
             return
@@ -96,7 +96,7 @@ class RawFileWriter:
                         lyrics = self.get_lyrics_for_track(title, artist)
                         line["lyrics"] = lyrics
                 file.write(json.dumps(raw_data))
-        print(f"Finished writing raw file for {date}")
+        print(f"Finished writing raw file for {date.date()}")
 
     def get_lyrics_for_track(self, title: str, artist: str) -> str:
         """
@@ -108,19 +108,16 @@ class RawFileWriter:
         """
         lyric_file_name = self.get_lyrics_file_name(artist, title)
         if os.path.exists(lyric_file_name):
-            print(f"getting lyrics from store")
             with open(lyric_file_name, "r+") as file:
                 song_lyrics = file.read()
         else:
-            print(f"Fetching lyrics from api")
             bash_command = f"songtext -t '{title}' -a '{artist}'"
             try:
                 song_lyrics = subprocess.check_output(['bash', '-c', bash_command])
-                print(f"Success fetching lyrics from api")
+                print(f"Success fetching {artist} - {title} lyrics from api")
                 if isinstance(song_lyrics, bytes):
                     song_lyrics = song_lyrics.decode("utf-8")
-            except Exception as e:
-                print(f"Error fetching lyrics from api: {e}")
+            except Exception:
                 song_lyrics = "null"
             if "Instrumental" in song_lyrics:
                 song_lyrics = "Instrumental"

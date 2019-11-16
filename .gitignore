@@ -1,6 +1,7 @@
 .idea
-config/lyricsstash/
-config/defaultuser
+shared/lyricsstash/
+shared/defaultuser
+shared/rawdata/
 .DS_Store
 __pycache__/
 */users/

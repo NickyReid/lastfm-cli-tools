@@ -6,8 +6,8 @@ import requests
 import multiprocessing
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
-from config.set_username import SetUsername
-from config.config import Config
+from shared.set_username import SetUsername
+from shared.config import Config
 
 def go():
     LastHop.run()

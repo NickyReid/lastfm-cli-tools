@@ -8,10 +8,10 @@ import enum
 import requests
 import subprocess
 import multiprocessing
+import lastfm_user_data as lud
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
-from config.set_username import SetUsername
-from config.config import Config
+from shared.config import Config
 
 
 class Interval(enum.Enum):
@@ -19,31 +19,7 @@ class Interval(enum.Enum):
     YEAR = "year"
 
 
-class UserData:
-    def __init__(self):
-        self.api_key = Config.API_KEY
-        self.username = SetUsername.set_username()
-
-    def get_lastfm_user_data(self):
-        """
-        Get the User's Last.fm profile information
-        :return: Dict with user's username, join date, real name and total number of tracks played
-        """
-        api_url = f"http://ws.audioscrobbler.com/2.0/?method=user.getinfo" \
-                  f"&user={self.username}" \
-                  f"&api_key={self.api_key}" \
-                  f"&format=json"
-        api_response = requests.get(api_url).json()
-
-        return {
-            "username": self.username,
-            "join_date": datetime.fromtimestamp(float(api_response.get("user").get("registered").get("unixtime"))),
-            "real_name": api_response.get("user").get("realname"),
-            "total_tracks": api_response.get("user").get("playcount")
-        }
-
-
-class FileWriter:
+class RawFileWriter:
 
     def __init__(self, start_date: datetime = None, end_date: datetime = datetime.today(),
                  interval: Interval = Interval.YEAR.value, include_lyrics: bool = False):
@@ -53,7 +29,7 @@ class FileWriter:
         :param interval: Interval of dates to get data for. Default to Yearly.
         :param include_lyrics: Fetch lyrics for songs. Default False.
         """
-        lastfm_user_data = UserData().get_lastfm_user_data()
+        lastfm_user_data = lud.UserData().get_lastfm_user_data()
         lastfm_username = lastfm_user_data.get("username")
         lastfm_join_date = lastfm_user_data.get("join_date")
         self.stats_start_date = start_date if start_date else lastfm_join_date
@@ -68,11 +44,10 @@ class FileWriter:
         self.username = lastfm_username
         self.api_key = Config.API_KEY
         self.timezone_diff = self.get_timezone_diff()
-        self.file_path = os.path.dirname(os.path.realpath(__file__)) + '/users/{username}'.format(
-            username=self.username)
+        self.file_path = f"{Config.RAW_DATA_PATH}/users/{self.username}"
         if not os.path.exists(self.file_path):
             os.makedirs(self.file_path)
-        self.lyrics_file_path = os.path.dirname(os.path.realpath(__file__)) + '/users/{username}/lyricsstore'.format(
+        self.lyrics_file_path = Config.RAW_DATA_PATH + '/users/{username}/lyricsstore'.format(
             username=self.username)
         if not os.path.exists(self.lyrics_file_path):
             os.makedirs(self.lyrics_file_path)
@@ -144,8 +119,8 @@ class FileWriter:
                 print(f"Success fetching lyrics from api")
                 if isinstance(song_lyrics, bytes):
                     song_lyrics = song_lyrics.decode("utf-8")
-            except:
-                print(f"Error fetching lyrics from api")
+            except Exception as e:
+                print(f"Error fetching lyrics from api: {e}")
                 song_lyrics = "null"
             if "Instrumental" in song_lyrics:
                 song_lyrics = "Instrumental"
@@ -153,8 +128,6 @@ class FileWriter:
                 song_lyrics = "null"
             else:
                 song_lines = song_lyrics.split("\n")
-                for line in song_lines:
-                    print(f"line {line}")
                 if len(song_lines) > 2:
                     title_removed = song_lines[3:]
                     song_lyrics = " ".join(title_removed)
@@ -259,7 +232,7 @@ if __name__ == '__main__':
     start_time = datetime.now()
 
     start_date = datetime.today() - timedelta(days=2)
-    file_writer = FileWriter()
+    file_writer = RawFileWriter()
     file_writer.process_data_for_all_days()
 
     print(f"\n(took {(datetime.now() - start_time).seconds} seconds)")

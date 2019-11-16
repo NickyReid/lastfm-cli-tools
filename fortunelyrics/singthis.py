@@ -2,8 +2,8 @@ import os
 import json
 import urllib.request, urllib.error, urllib.parse
 import subprocess
-from config.config import Config
-from config.set_username import SetUsername
+from shared.config import Config
+from shared.set_username import SetUsername
 
 
 def go():

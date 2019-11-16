@@ -1,111 +1,54 @@
 import os
 import csv
 import json
-import math
-import requests
 import multiprocessing
+import raw_file_writer
+import lastfm_user_data as lud
 from datetime import datetime, timedelta
-from config.set_username import SetUsername
-from config.config import Config
+from shared.config import Config
 
-STATS_DATE_ANCHOR = datetime.today() - timedelta(days=1)
-# STATS_DATE_ANCHOR = datetime.today()
-
-
-class UserData:
-    def __init__(self):
-        self.api_key = Config.API_KEY
-        self.username = SetUsername.set_username()
-
-    def get_lastfm_user_data(self):
-        api_url = f"http://ws.audioscrobbler.com/2.0/?method=user.getinfo" \
-                  f"&user={self.username}" \
-                  f"&api_key={self.api_key}" \
-                  f"&format=json"
-        api_response = requests.get(api_url).json()
-
-        return {
-            "username": self.username,
-            "join_date": datetime.fromtimestamp(float(api_response.get("user").get("registered").get("unixtime"))),
-            "real_name": api_response.get("user").get("realname"),
-            "total_tracks": api_response.get("user").get("playcount")
-        }
+# STATS_START_DATE = datetime.today() - timedelta(days=1)
+STATS_START_DATE = datetime.today()
 
 
-class FileWriter:
+class FormattedFileWriter:
 
-    def __init__(self, lastfm_username=None, lastfm_join_date=None):
-        if not lastfm_username or not lastfm_join_date:
-            lastfm_user_data = UserData().get_lastfm_user_data()
-            lastfm_username = lastfm_user_data.get("username")
-            lastfm_join_date = lastfm_user_data.get("join_date")
+    def __init__(self, lastfm_username, lastfm_join_date):
         self.username = lastfm_username
         self.join_date = lastfm_join_date
         self.api_key = Config.API_KEY
         self.timezone_diff = self.get_timezone_diff()
+        self.raw_data_path = f"{Config.RAW_DATA_PATH}/users/{self.username}"
         self.file_path = os.path.dirname(os.path.realpath(__file__)) + '/users/{username}'.format(
             username=self.username)
         if not os.path.exists(self.file_path):
             os.makedirs(self.file_path)
+        self.raw_file_writer = raw_file_writer.RawFileWriter(start_date=self.join_date,
+                                                             end_date=STATS_START_DATE,
+                                                             interval=raw_file_writer.Interval.YEAR.value,
+                                                             include_lyrics=False)
 
-    def get_lastfm_user_data(self):
-        api_url = f"http://ws.audioscrobbler.com/2.0/?method=user.getinfo" \
-                  f"&user={self.username}" \
-                  f"&api_key={self.api_key}" \
-                  f"&format=json"
-
-        api_response = requests.get(api_url).json()
-        return {
-            "join_date": datetime.fromtimestamp(float(api_response.get("user").get("registered").get("unixtime"))),
-            "real_name": api_response.get("user").get("realname"),
-            "total_tracks": api_response.get("user").get("playcount")
-        }
-
-    def process_data_for_all_days(self):
+    def format_data_for_all_days(self):
         days = self.get_list_of_dates()
         jobs = []
         for day in days:
-            job = multiprocessing.Process(target=self.write_raw_file_and_formatted_file_for_day, args=(day,))
+            job = multiprocessing.Process(target=self.write_files_for_day, args=(day,))
             jobs.append(job)
             job.start()
         for job in jobs:
             job.join()
 
-    def write_raw_file_and_formatted_file_for_day(self, day):
-        self.write_raw_file_for_day(day)
+    def write_files_for_day(self, day):
+        self.raw_file_writer.write_raw_file_for_day(day)
         self.write_formatted_file_for_day(day)
 
-    def write_raw_files_for_each_day(self):
-        days = self.get_list_of_dates()
-
-        jobs = []
-        for day in days:
-            job = multiprocessing.Process(target=self.write_raw_file_for_day, args=(day,))
-            jobs.append(job)
-            job.start()
-        for job in jobs:
-            job.join()
-
     def get_list_of_dates(self):
-        date_to_process = STATS_DATE_ANCHOR
+        date_to_process = STATS_START_DATE
         days = []
         while date_to_process >= self.join_date:
             days.append(date_to_process)
             date_to_process = date_to_process.replace(year=date_to_process.year-1)
         return days
-
-    def get_raw_data_for_day(self, date):
-        raw_file_name = self.get_raw_filename_for_date(date)
-        if not os.path.exists(raw_file_name) or os.stat(raw_file_name).st_size < 1 \
-                or date.date() == datetime.today().date():
-            self.write_raw_file_for_day(date)
-        with open(raw_file_name, "r+") as file:
-            result = file.read()
-        return result
-
-    def write_formatted_files_for_all_days(self):
-        for day in self.get_list_of_dates():
-            self.write_formatted_file_for_day(date=day)
 
     def write_formatted_file_for_day(self, date):
         formatted_file_name = self.get_formatted_filename_for_date(date)
@@ -133,62 +76,9 @@ class FileWriter:
                     line_to_write = f"{artist}|{title}|{play_date_formatted}"
                     file.write(line_to_write + "\n")
 
-    def write_raw_file_for_day(self, date):
-        raw_file_name = self.get_raw_filename_for_date(date)
-        if not self.file_needs_to_be_written(raw_file_name, date):
-            return
-
-        raw_data = self.get_lastfm_tracks_for_day(date)
-        with open(raw_file_name, "w+") as file:
-            if not raw_data:
-                file.write("0")
-            else:
-                file.write(json.dumps(raw_data))
-
-    def lastfm_api_query(self, date, page_num):
-        date_start = date.replace(hour=0).replace(minute=0).replace(second=0).replace(microsecond=0)
-        date_start_epoch = int(date_start.timestamp())
-        date_end_epoch = int(date_start.replace(hour=23).replace(minute=59).replace(second=59).timestamp())
-        api_url = f"http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks" \
-                  f"&user={self.username}&" \
-                  f"api_key=8257fbe241e266367f27e30b0e866aba&" \
-                  f"&from={date_start_epoch}" \
-                  f"&to={date_end_epoch}" \
-                  f"&limit=200" \
-                  f"&page={page_num}" \
-                  f"&format=json"
-        response = requests.get(api_url).json()
-        return response
-
-    def get_lastfm_tracks_for_day(self, date):
-        lastfm_response = self.lastfm_api_query(date, 1)
-        lastfm_tracks = lastfm_response.get("recenttracks", {}).get("track")
-        total_track_count = lastfm_response.get("recenttracks", {}).get("total", 0)
-        num_pages = math.ceil(total_track_count / 200)
-        if num_pages > 1:
-            for page_num in range(2, num_pages + 1):
-                lastfm_response = self.lastfm_api_query(date, page_num)
-                lastfm_tracks.extend(lastfm_response.get("recenttracks", {}).get("track"))
-        if lastfm_tracks:
-            if isinstance(lastfm_tracks, dict):
-                lastfm_tracks = [lastfm_tracks]
-
-            if lastfm_tracks and len(lastfm_tracks) > 0:
-                #  Remove currently playing song from past results
-                if lastfm_tracks[0].get("@attr", {}).get("nowplaying", False) \
-                        and date.date() != datetime.today().date():
-                    del lastfm_tracks[0]
-                #  Remove duplicated playing song from current results
-                elif lastfm_tracks[0].get("@attr", {}).get("nowplaying", False) \
-                        and date.date() == datetime.today().date() \
-                        and len(lastfm_tracks) > 1 \
-                        and lastfm_tracks[0].get("name") == lastfm_tracks[1].get("name"):
-                    del lastfm_tracks[0]
-        return lastfm_tracks
-
     def get_raw_filename_for_date(self, date):
         date_string = datetime.strftime(date, "%Y-%m-%d")
-        return f"{self.file_path}/{date_string}raw.txt"
+        return f"{self.raw_data_path}/{date_string}raw.txt"
 
     def get_formatted_filename_for_date(self, date):
         date_string = datetime.strftime(date, "%Y-%m-%d")
@@ -219,11 +109,7 @@ class FileWriter:
 
 
 class StatsCompiler:
-    def __init__(self, lastfm_username=None, lastfm_join_date=None):
-        if not lastfm_username or not lastfm_join_date:
-            lastfm_user_data = UserData().get_lastfm_user_data()
-            lastfm_username = lastfm_user_data.get("username")
-            lastfm_join_date = lastfm_user_data.get("join_date")
+    def __init__(self, lastfm_username, lastfm_join_date):
         self.username = lastfm_username
         self.join_date = lastfm_join_date
         self.file_path = os.path.dirname(os.path.realpath(__file__)) + '/users/{username}'.format(
@@ -299,7 +185,7 @@ class StatsCompiler:
         return track_time_stamp_dict
 
     def get_list_of_dates(self):
-        date_to_process = STATS_DATE_ANCHOR
+        date_to_process = STATS_START_DATE
         days = []
         while date_to_process >= self.join_date:
             days.append(date_to_process)
@@ -313,21 +199,22 @@ class StatsCompiler:
 
 class StatsPresenter:
 
-    def __init__(self, lastfm_user_data):
-        self.user_data = lastfm_user_data
-        self.join_date = self.user_data.get("join_date")
-        self.total_tracks = int(self.user_data.get("total_tracks"))
-        self.avg_daily_tracks = int(self.total_tracks / (STATS_DATE_ANCHOR - self.join_date).days)
-        self.stats_compiler = StatsCompiler(self.user_data.get("username"))
+    def __init__(self, usermame, real_name, join_date, total_tracks):
+        self.username = usermame
+        self.real_name = real_name
+        self.join_date = join_date
+        self.total_tracks = total_tracks
+        self.avg_daily_tracks = int(self.total_tracks / (STATS_START_DATE - self.join_date).days)
+        self.stats_compiler = StatsCompiler(self.username, self.join_date)
 
     def present(self):
-        intro = f"\n{self.user_data.get('real_name')} has been on Last.fm for " \
-                f"{(STATS_DATE_ANCHOR.year - self.join_date.year)} years.\n" \
-                f"They've played {self.user_data.get('total_tracks')} tracks.\n" \
-                f"That's an average of {self.avg_daily_tracks} track{'s' if self.avg_daily_tracks > 1 else ''} per day." \
-                f"\n"
+        intro = f"\n{self.real_name} has been on Last.fm for " \
+                f"{(STATS_START_DATE.year - self.join_date.year)} years.\n" \
+                f"They've played {self.total_tracks} tracks.\n" \
+                f"That's an average of {self.avg_daily_tracks} track{'s' if self.avg_daily_tracks > 1 else ''} " \
+                f"per day.\n"
         print(intro)
-        print(f"- - - - - - - - - - - - - {STATS_DATE_ANCHOR.strftime('%B %-d')} - - - - - - - - - - - - - -\n")
+        print(f"- - - - - - - - - - - - - {STATS_START_DATE.strftime('%B %-d')} - - - - - - - - - - - - - -\n")
         print("- - - - - - - - - - - Most Played Artists - - - - - - - - - - - -")
         for most_played in self.stats_compiler.most_played_artists():
             if most_played:
@@ -335,16 +222,25 @@ class StatsPresenter:
         print("- - - - - - - - - - - - - All Artists - - - - - - - - - - - - - - -")
 
 
+class Lasthop:
+
+    def __init__(self):
+        self.user_data = lud.UserData().get_lastfm_user_data()
+
+    def lasthop(self):
+        formatted_file_writer = FormattedFileWriter(self.user_data["username"],
+                                                    self.user_data["join_date"])
+        formatted_file_writer.format_data_for_all_days()
+        presenter = StatsPresenter(self.user_data["username"],
+                                   self.user_data["real_name"],
+                                   self.user_data["join_date"],
+                                   self.user_data["total_tracks"])
+        presenter.present()
+
+
 if __name__ == '__main__':
     start_time = datetime.now()
-    user_data = UserData().get_lastfm_user_data()
-    username = user_data.get("username")
-    join_date = user_data.get("join_date")
-
-    file_writer = FileWriter(username, join_date)
-    file_writer.process_data_for_all_days()
-
-    StatsPresenter(user_data).present()
+    Lasthop().lasthop()
     print(f"\n(took {(datetime.now() - start_time).seconds} seconds)")
 
 

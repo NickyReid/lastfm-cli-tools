@@ -8,10 +8,10 @@ import subprocess
 import random
 import os
 import multiprocessing
-from config.config import Config
+from shared.config import Config
 # from profanity import profanity
 from datetime import datetime
-from config.set_username import SetUsername
+from shared.set_username import SetUsername
 
 import requests
 

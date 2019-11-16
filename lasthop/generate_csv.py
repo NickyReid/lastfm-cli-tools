@@ -32,12 +32,12 @@ class CSVWriter:
         self.lyrics_file_path = f"{self.raw_data_path}/users/{self.username}/lyricsstore"
         if not os.path.exists(self.lyrics_file_path):
             os.makedirs(self.lyrics_file_path)
+        self.raw_file_writer = raw_file_writer.RawFileWriter(start_date=self.stat_start_date,
+                                                             interval=raw_file_writer.Interval.DAY.value,
+                                                             include_lyrics=True)
 
     def process_data_for_all_days(self):
-        rfw = raw_file_writer.RawFileWriter(start_date=self.stat_start_date,
-                                            interval=raw_file_writer.Interval.DAY.value,
-                                            include_lyrics=True)
-        rfw.process_data_for_all_days()
+        self.raw_file_writer.process_data_for_all_days()
         self.write_formatted_file_for_all_days()
 
     def write_formatted_file_for_all_days(self):
@@ -68,6 +68,8 @@ class CSVWriter:
                             play_date_formatted = (play_date_datetime.date()).strftime("%Y/%m/%d")
                             day_list = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
                             lyrics = line.get("lyrics")
+                            if lyrics is None:
+                                lyrics = self.raw_file_writer.get_lyrics_for_track(title, artist)
                             line_to_write = f"{play_date_datetime.year}|" \
                                             f"{play_date_datetime.month}|" \
                                             f"{day_list[play_date_datetime.weekday()]}|" \

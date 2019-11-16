@@ -1,6 +1,7 @@
 """
 Get data from Last.fm api and save to disk
 """
+import time
 import os
 import json
 import math
@@ -79,11 +80,11 @@ class RawFileWriter:
         from Songtext api.
         :param date: Day for which to get data for
         """
-        print(f'starting {date}')
+
         raw_file_name = self.get_raw_filename_for_date(date)
         if not self.file_needs_to_be_written(raw_file_name, date):
             return
-
+        print(f'starting {date}')
         raw_data = self.get_lastfm_tracks_for_day(date)
         with open(raw_file_name, "w+") as file:
             if not raw_data:
@@ -150,6 +151,8 @@ class RawFileWriter:
                   f"&limit=200" \
                   f"&page={page_num}" \
                   f"&format=json"
+        print(api_url)
+        time.sleep(1)
         response = requests.get(api_url).json()
         return response
 

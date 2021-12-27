@@ -11,6 +11,10 @@ from shared.config import Config
 STATS_START_DATE = datetime.today()
 
 
+def go():
+    Lasthop.run()
+
+
 class FormattedFileWriter:
 
     def __init__(self, lastfm_username, lastfm_join_date):
@@ -225,7 +229,13 @@ class StatsPresenter:
         print("- - - - - - - - - - - - - All Artists - - - - - - - - - - - - - - -")
         self.stats_compiler.all_artists()
 
+
 class Lasthop:
+    @classmethod
+    def run(cls):
+        start_time = datetime.now()
+        Lasthop().lasthop()
+        print(f"\n(took {(datetime.now() - start_time).seconds} seconds)")
 
     def __init__(self):
         self.user_data = lud.UserData().get_lastfm_user_data()
@@ -242,8 +252,5 @@ class Lasthop:
 
 
 if __name__ == '__main__':
-    start_time = datetime.now()
-    Lasthop().lasthop()
-    print(f"\n(took {(datetime.now() - start_time).seconds} seconds)")
-
+    Lasthop.run()
 

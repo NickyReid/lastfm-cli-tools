@@ -12,6 +12,7 @@ from shared.config import Config
 from profanity import profanity
 from datetime import datetime
 from shared.set_username import SetUsername
+from fortunelyrics.genius_client import GeniusClient
 
 
 def go():
@@ -104,23 +105,11 @@ class SongGetter:
         return track_name, track_artist
 
     def get_lyrics(self):
-        try:
-            track_name, track_artist = self.get_random_song()
-            genius = lyricsgenius.Genius(os.getenv("GENIUS_ACCESS_TOKEN"))
-            song = genius.search_song(track_name, track_artist)
-            if song:
-                song_lyrics = song.lyrics
-                if (
-                    "Instrumental" in song_lyrics
-                    or song_lyrics.isspace()
-                    or len(song_lyrics) < 30
-                ):
-                    return self.get_lyrics()
-                else:
-                    return song_lyrics
-            else:
-                return self.get_lyrics()
-        except (subprocess.CalledProcessError, TypeError) as e:
+        track_name, track_artist = self.get_random_song()
+        lyrics = GeniusClient.get_lyrics(track_artist, track_name)
+        if lyrics:
+            return lyrics
+        else:
             return self.get_lyrics()
 
     def write_file(self, song_lyrics):

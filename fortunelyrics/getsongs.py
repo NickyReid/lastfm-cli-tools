@@ -6,6 +6,7 @@ import sys
 import subprocess
 import random
 import os
+import lyricsgenius
 import multiprocessing
 from shared.config import Config
 from profanity import profanity
@@ -18,7 +19,6 @@ def go():
 
 
 class SongGetter:
-
     def __init__(self, username):
         self.username = username if username else open('config/defaultuser', 'r').read()
         self.clean = Config.CLEAN  # SFW option, doesn't write songs with swearing
@@ -72,8 +72,8 @@ class SongGetter:
         response = json.loads(urllib.request.urlopen(self.api_url).read())
         tracks = response.get("lovedtracks").get("track") if self.loved_or_top == 0 else response.get("toptracks").get("track")
         track_name, track_artist = self.pick_song_from_list(tracks)
-        bash_command = "songtext -t '" + track_name + "' -a '" + track_artist + "'"
-        return bash_command
+        return track_name, track_artist
+
 
     def pick_song_from_list(self, tracks):
         random_track = random.choice(tracks)
@@ -86,24 +86,31 @@ class SongGetter:
 
     def get_lyrics(self):
         try:
-            song = self.get_random_song()
-            song_lyrics = subprocess.check_output(['bash', '-c', song])
-            if "Instrumental" in song_lyrics.decode("utf-8") or song_lyrics.decode("utf-8").isspace() or \
-                    len(song_lyrics.decode("utf-8")) < 30:
-                return self.get_lyrics()
+            track_name, track_artist = self.get_random_song()
+            genius = lyricsgenius.Genius(os.getenv("GENIUS_ACCESS_TOKEN"))
+            song = genius.search_song(track_name, track_artist)
+            if song:
+                song_lyrics = song.lyrics
+                if "Instrumental" in song_lyrics or song_lyrics.isspace() or \
+                        len(song_lyrics) < 30:
+                    return self.get_lyrics()
+                else:
+                    return song_lyrics
             else:
-                return song_lyrics
+                return self.get_lyrics()
         except (subprocess.CalledProcessError, TypeError) as e:
             return self.get_lyrics()
 
     def write_file(self, song_lyrics):
-        lines = song_lyrics.decode("utf-8").splitlines()
+        lines = song_lyrics.splitlines()
         random_line_number = random.randint(0, len(lines))
         stanza_to_write = ""
-        for i in range(random_line_number+2, random_line_number+7):
+        for i in range(random_line_number, random_line_number+4):
             try:
-                if lines[i].strip() and not lines[i].isspace() and len(lines[i]) > 1:
-                    stanza_to_write += (lines[i] + "\n")
+                line = lines[i]
+                if line.strip() and not line.isspace() and len(line) > 1 and ("[" not in line and "]" not in line):
+                    line.replace("EmbedShare", "").replace("URLCopyEmbedCopy", "")
+                    stanza_to_write += (line + "\n")
             except IndexError:
                 pass
         if self.clean is True and (profanity.contains_profanity(stanza_to_write) or

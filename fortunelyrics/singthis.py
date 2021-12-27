@@ -1,5 +1,6 @@
 import os
 import json
+import lyricsgenius
 import urllib.request, urllib.error, urllib.parse
 import subprocess
 from shared.config import Config
@@ -26,26 +27,14 @@ class SingThis:
             .replace(')', '').replace('(', '').replace("'", "")
         track_artist = response.get("recenttracks").get("track")[0].get("artist").get("#text")\
             .replace(')', '').replace('(', '').replace("'", "")
-        try:
-            bash_command = "songtext -t '" + track_name + "' -a '" + track_artist + "'"
-            return subprocess.check_output(['bash', '-c', bash_command])
-        except subprocess.CalledProcessError:
-            return track_artist + " - " + track_name + "\n. . . . . . ."
+        genius = lyricsgenius.Genius(os.getenv("GENIUS_ACCESS_TOKEN"))
+        song = genius.search_song(track_name, track_artist)
+        if song:
+            return song.lyrics.replace("EmbedShare", "").replace("URLCopyEmbedCopy", "")
 
     @classmethod
     def run(cls):
-        sing_this = SingThis()
-        try:
-            print(sing_this.get_song())
-        except UnicodeEncodeError:
-            import unicodedata
-            import sys
-            reload(sys)
-            sys.setdefaultencoding("utf-8")
-            nkfd_form = unicodedata.normalize('NFKD', str(sing_this.get_song()))
-            print("".join([c for c in nkfd_form if not unicodedata.combining(c)]))
-        except Exception as e:
-            print(e.message)
+        print(SingThis().get_song())
 
 
 if __name__ == '__main__':

@@ -74,7 +74,6 @@ class SongGetter:
         track_name, track_artist = self.pick_song_from_list(tracks)
         return track_name, track_artist
 
-
     def pick_song_from_list(self, tracks):
         random_track = random.choice(tracks)
         try:

@@ -14,26 +14,32 @@ CUSTOM_START_DATE = False  # datetime.today() - timedelta(days=31)
 
 
 class CSVWriter:
-
     def __init__(self):
         lastfm_user_data = lud.UserData().get_lastfm_user_data()
         lastfm_username = lastfm_user_data.get("username")
         lastfm_join_date = lastfm_user_data.get("join_date")
 
         self.username = lastfm_username
-        self.stat_start_date = CUSTOM_START_DATE if CUSTOM_START_DATE else lastfm_join_date
+        self.stat_start_date = (
+            CUSTOM_START_DATE if CUSTOM_START_DATE else lastfm_join_date
+        )
         self.timezone_diff = self.get_timezone_diff()
         self.raw_data_path = f"{Config.RAW_DATA_PATH}/users/{self.username}"
-        self.file_path = os.path.dirname(os.path.realpath(__file__)) + '/users/{username}'.format(
-            username=self.username)
+        self.file_path = os.path.dirname(
+            os.path.realpath(__file__)
+        ) + "/users/{username}".format(username=self.username)
         if not os.path.exists(self.file_path):
             os.makedirs(self.file_path)
-        self.lyrics_file_path = f"{self.raw_data_path}/users/{self.username}/lyricsstore"
+        self.lyrics_file_path = (
+            f"{self.raw_data_path}/users/{self.username}/lyricsstore"
+        )
         if not os.path.exists(self.lyrics_file_path):
             os.makedirs(self.lyrics_file_path)
-        self.raw_file_writer = raw_file_writer.RawFileWriter(start_date=self.stat_start_date,
-                                                             interval=raw_file_writer.Interval.DAY.value,
-                                                             include_lyrics=True)
+        self.raw_file_writer = raw_file_writer.RawFileWriter(
+            start_date=self.stat_start_date,
+            interval=raw_file_writer.Interval.DAY.value,
+            include_lyrics=True,
+        )
 
     def process_data_for_all_days(self):
         self.raw_file_writer.process_data_for_all_days()
@@ -43,7 +49,9 @@ class CSVWriter:
         formatted_file_name = self.get_formatted_filename()
         day = STATS_END_DATE
         with open(formatted_file_name, "w+") as file:
-            file.write("Year|Month|Weekday|Date|Artist name|Album name|Song title|Lyrics\n")
+            file.write(
+                "Year|Month|Weekday|Date|Artist name|Album name|Song title|Lyrics\n"
+            )
             while True:
                 if day < self.stat_start_date:
                     break
@@ -56,28 +64,40 @@ class CSVWriter:
                         continue
                     for line in json_data:
                         if isinstance(line, dict):
-                            artist = line.get('artist', {}).get('#text').replace("|", "")
-                            title = line.get('name').replace("|", "")
-                            album = line.get('album', {}).get('#text').replace("|", "")
-                            play_date = line.get('date', {}).get('#text', (datetime.now() - timedelta(
-                                hours=self.timezone_diff)).strftime("%d %b %Y, %H:%M"))
-                            play_date_datetime = datetime.strptime(play_date, "%d %b %Y, %H:%M") + timedelta(
-                                hours=self.timezone_diff)
+                            artist = (
+                                line.get("artist", {}).get("#text").replace("|", "")
+                            )
+                            title = line.get("name").replace("|", "")
+                            album = line.get("album", {}).get("#text").replace("|", "")
+                            play_date = line.get("date", {}).get(
+                                "#text",
+                                (
+                                    datetime.now() - timedelta(hours=self.timezone_diff)
+                                ).strftime("%d %b %Y, %H:%M"),
+                            )
+                            play_date_datetime = datetime.strptime(
+                                play_date, "%d %b %Y, %H:%M"
+                            ) + timedelta(hours=self.timezone_diff)
 
-                            play_date_formatted = (play_date_datetime.date()).strftime("%Y/%m/%d")
-                            day_list = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+                            play_date_formatted = (play_date_datetime.date()).strftime(
+                                "%Y/%m/%d"
+                            )
+                            day_list = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
                             lyrics = line.get("lyrics")
                             if lyrics is None:
-                                lyrics = self.raw_file_writer.get_lyrics_for_track(title, artist)
-                            line_to_write = f"{play_date_datetime.year}|" \
-                                            f"{play_date_datetime.month}|" \
-                                            f"{day_list[play_date_datetime.weekday()]}|" \
-                                            f"{play_date_formatted}|" \
-                                            f"{artist}|" \
-                                            f"{album}|" \
-                                            f"{title}|" \
-                                            f"{lyrics}" \
-
+                                lyrics = self.raw_file_writer.get_lyrics_for_track(
+                                    title, artist
+                                )
+                            line_to_write = (
+                                f"{play_date_datetime.year}|"
+                                f"{play_date_datetime.month}|"
+                                f"{day_list[play_date_datetime.weekday()]}|"
+                                f"{play_date_formatted}|"
+                                f"{artist}|"
+                                f"{album}|"
+                                f"{title}|"
+                                f"{lyrics}"
+                            )
                             file.write(line_to_write + "\n")
                     print(f"Finished processing {raw_file_name}")
                 day = day - timedelta(days=1)
@@ -89,7 +109,9 @@ class CSVWriter:
 
     def get_lyrics_file_name(self, artist, title):
         artist_track_string = f"{artist}{title}"
-        artist_track_string = ''.join(e for e in artist_track_string if e.isalnum())[:35]
+        artist_track_string = "".join(e for e in artist_track_string if e.isalnum())[
+            :35
+        ]
         return f"{self.lyrics_file_path}/{artist_track_string}.txt"
 
     def get_formatted_filename(self):
@@ -104,12 +126,10 @@ class CSVWriter:
         return datetime.now().hour - datetime.utcnow().hour
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     start_time = datetime.now()
 
     file_writer = CSVWriter()
     file_writer.process_data_for_all_days()
 
     print(f"\n(took {(datetime.now() - start_time).seconds} seconds)")
-
-

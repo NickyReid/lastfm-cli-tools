@@ -20,7 +20,7 @@ def go():
 
 class SongGetter:
     def __init__(self, username):
-        self.username = username if username else open('config/defaultuser', 'r').read()
+        self.username = username if username else open("config/defaultuser", "r").read()
         self.clean = Config.CLEAN  # SFW option, doesn't write songs with swearing
         self.api_key = Config.API_KEY
         self.top_tracks_limit = Config.TOP_TRACKS_LIMIT
@@ -46,40 +46,59 @@ class SongGetter:
         """
         self.loved_or_top = random.randint(0, 2)
         if self.loved_or_top == 0:
-            api_url = "http://ws.audioscrobbler.com/2.0/?method=user.getlovedtracks&user=" \
-                           "{username}&api_key={api_key}&format=json".format(username=self.username,
-                                                                             api_key=self.api_key)
+            api_url = (
+                "http://ws.audioscrobbler.com/2.0/?method=user.getlovedtracks&user="
+                "{username}&api_key={api_key}&format=json".format(
+                    username=self.username, api_key=self.api_key
+                )
+            )
         else:
-            api_url = "http://ws.audioscrobbler.com/2.0/?method=user.gettoptracks&user=" \
-                           "{username}&api_key={api_key}&limit={top_tracks_limit}" \
-                           "&period={top_tracks_period}&format=json".format(username=self.username,
-                                                                            api_key=self.api_key,
-                                                                            top_tracks_limit=self.top_tracks_limit,
-                                                                            top_tracks_period=self.top_tracks_period)
+            api_url = (
+                "http://ws.audioscrobbler.com/2.0/?method=user.gettoptracks&user="
+                "{username}&api_key={api_key}&limit={top_tracks_limit}"
+                "&period={top_tracks_period}&format=json".format(
+                    username=self.username,
+                    api_key=self.api_key,
+                    top_tracks_limit=self.top_tracks_limit,
+                    top_tracks_period=self.top_tracks_period,
+                )
+            )
         return api_url
 
     def get_new_file(self):
         new_file_number = random.randint(0, 9000)
-        new_file_name = self.lyric_stash_path + "/{filenum}".format(filenum=str(new_file_number))
+        new_file_name = self.lyric_stash_path + "/{filenum}".format(
+            filenum=str(new_file_number)
+        )
         try:
             if os.path.getsize(new_file_name) > 0:
-                new_file_name = self.lyric_stash_path + "/{filenum}".format(filenum=str(new_file_number + 1))
+                new_file_name = self.lyric_stash_path + "/{filenum}".format(
+                    filenum=str(new_file_number + 1)
+                )
         except OSError:
             pass
         return new_file_name
 
     def get_random_song(self):
         response = json.loads(urllib.request.urlopen(self.api_url).read())
-        tracks = response.get("lovedtracks").get("track") if self.loved_or_top == 0 else response.get("toptracks").get("track")
+        tracks = (
+            response.get("lovedtracks").get("track")
+            if self.loved_or_top == 0
+            else response.get("toptracks").get("track")
+        )
         track_name, track_artist = self.pick_song_from_list(tracks)
         return track_name, track_artist
-
 
     def pick_song_from_list(self, tracks):
         random_track = random.choice(tracks)
         try:
-            track_name = random_track.get('name').replace(')', '').replace('(', '').replace("'", "")
-            track_artist = random_track.get('artist').get('name')
+            track_name = (
+                random_track.get("name")
+                .replace(")", "")
+                .replace("(", "")
+                .replace("'", "")
+            )
+            track_artist = random_track.get("artist").get("name")
         except AttributeError:
             (track_name, track_artist) = self.pick_song_from_list(tracks)
         return track_name, track_artist
@@ -91,8 +110,11 @@ class SongGetter:
             song = genius.search_song(track_name, track_artist)
             if song:
                 song_lyrics = song.lyrics
-                if "Instrumental" in song_lyrics or song_lyrics.isspace() or \
-                        len(song_lyrics) < 30:
+                if (
+                    "Instrumental" in song_lyrics
+                    or song_lyrics.isspace()
+                    or len(song_lyrics) < 30
+                ):
                     return self.get_lyrics()
                 else:
                     return song_lyrics
@@ -105,19 +127,26 @@ class SongGetter:
         lines = song_lyrics.splitlines()
         random_line_number = random.randint(0, len(lines))
         stanza_to_write = ""
-        for i in range(random_line_number, random_line_number+4):
+        for i in range(random_line_number, random_line_number + 4):
             try:
                 line = lines[i]
-                if line.strip() and not line.isspace() and len(line) > 1 and ("[" not in line and "]" not in line):
+                if (
+                    line.strip()
+                    and not line.isspace()
+                    and len(line) > 1
+                    and ("[" not in line and "]" not in line)
+                ):
                     line.replace("EmbedShare", "").replace("URLCopyEmbedCopy", "")
-                    stanza_to_write += (line + "\n")
+                    stanza_to_write += line + "\n"
             except IndexError:
                 pass
-        if self.clean is True and (profanity.contains_profanity(stanza_to_write) or
-                                   stanza_to_write.lower() in Config.SWEARS):
+        if self.clean is True and (
+            profanity.contains_profanity(stanza_to_write)
+            or stanza_to_write.lower() in Config.SWEARS
+        ):
             pass
         else:
-            self.lyrics_file = open(self.new_file_name, 'ab+')
+            self.lyrics_file = open(self.new_file_name, "ab+")
             self.lyrics_file.write(stanza_to_write.encode("utf-8"))
             self.lyrics_file.close()
             if os.path.getsize(self.new_file_name) < 1:
@@ -151,5 +180,5 @@ class SongGetter:
         print("(took {time} seconds)".format(time=(end_time - start_time).seconds))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     SongGetter.run()

@@ -3,10 +3,10 @@
 from setuptools import setup, find_packages
 
 requirements = [
-    'python-dateutil==2.7.2',
-    'requests==2.21.0',
-    'songtext==0.1.9',
+    'python-dateutil',
+    'requests',
     'profanity',
+    'lyricsgenius'
 ]
 
 setup_args = {

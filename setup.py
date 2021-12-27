@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 from setuptools import setup, find_packages
 
+
 requirements = ["python-dateutil", "requests", "profanity", "lyricsgenius"]
+
 
 setup_args = {
     "python_requires": ">3.5.2",

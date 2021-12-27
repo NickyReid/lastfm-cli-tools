@@ -6,7 +6,9 @@ Best results when used with [lolcat cli colours](https://github.com/busyloop/lol
 
 ### Print lyrics from songs on your last.fm.
 
-Uses the [Last.fm API](https://www.last.fm/api) and [Songtext python library](https://pypi.org/project/songtext/) 
+Uses the [Last.fm API](https://www.last.fm/api) and [lyricsgenius python library](https://pypi.org/project/lyricsgenius/) 
+
+_Note: You will need a [Genius API key](https://docs.genius.com/#/getting-started-h1)_
 
 #### Instructions:
 

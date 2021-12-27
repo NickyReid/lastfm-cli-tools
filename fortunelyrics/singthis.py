@@ -2,10 +2,9 @@ import os
 import json
 import lyricsgenius
 import urllib.request, urllib.error, urllib.parse
-import subprocess
 from shared.config import Config
 from shared.set_username import SetUsername
-
+from fortunelyrics.genius_client import GeniusClient
 
 def go():
     SingThis.run()
@@ -43,10 +42,7 @@ class SingThis:
             .replace("(", "")
             .replace("'", "")
         )
-        genius = lyricsgenius.Genius(os.getenv("GENIUS_ACCESS_TOKEN"))
-        song = genius.search_song(track_name, track_artist)
-        if song:
-            return song.lyrics.replace("EmbedShare", "").replace("URLCopyEmbedCopy", "")
+        return GeniusClient.get_lyrics(track_artist, track_name)
 
     @classmethod
     def run(cls):

@@ -14,15 +14,19 @@ class UserData:
         Get the User's Last.fm profile information
         :return: Dict with user's username, join date, real name and total number of tracks played
         """
-        api_url = f"http://ws.audioscrobbler.com/2.0/?method=user.getinfo" \
-                  f"&user={self.username}" \
-                  f"&api_key={self.api_key}" \
-                  f"&format=json"
+        api_url = (
+            f"http://ws.audioscrobbler.com/2.0/?method=user.getinfo"
+            f"&user={self.username}"
+            f"&api_key={self.api_key}"
+            f"&format=json"
+        )
         api_response = requests.get(api_url).json()
 
         return {
             "username": self.username,
-            "join_date": datetime.fromtimestamp(float(api_response.get("user").get("registered").get("unixtime"))),
+            "join_date": datetime.fromtimestamp(
+                float(api_response.get("user").get("registered").get("unixtime"))
+            ),
             "real_name": api_response.get("user").get("realname"),
-            "total_tracks": int(api_response.get("user").get("playcount"))
+            "total_tracks": int(api_response.get("user").get("playcount")),
         }

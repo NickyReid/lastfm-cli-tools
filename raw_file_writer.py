@@ -20,9 +20,13 @@ class Interval(enum.Enum):
 
 
 class RawFileWriter:
-
-    def __init__(self, start_date: datetime = None, end_date: datetime = datetime.today(),
-                 interval: Interval = Interval.YEAR.value, include_lyrics: bool = False):
+    def __init__(
+        self,
+        start_date: datetime = None,
+        end_date: datetime = datetime.today(),
+        interval: Interval = Interval.YEAR.value,
+        include_lyrics: bool = False,
+    ):
         """
         :param start_date: Earliest date to get data for. Default to the day the user joined Last.fm
         :param end_date: Latest date to get data for. Default to today.
@@ -42,8 +46,10 @@ class RawFileWriter:
         self.file_path = f"{Config.RAW_DATA_PATH}/users/{self.username}"
         if not os.path.exists(self.file_path):
             os.makedirs(self.file_path)
-        self.lyrics_file_path = Config.RAW_DATA_PATH + '/users/{username}/lyricsstore'.format(
-            username=self.username)
+        self.lyrics_file_path = (
+            Config.RAW_DATA_PATH
+            + "/users/{username}/lyricsstore".format(username=self.username)
+        )
         if not os.path.exists(self.lyrics_file_path):
             os.makedirs(self.lyrics_file_path)
 
@@ -87,8 +93,8 @@ class RawFileWriter:
                 file.write("0")
             else:
                 for line in raw_data:
-                    artist = line.get('artist', {}).get('#text')
-                    title = line.get('name')
+                    artist = line.get("artist", {}).get("#text")
+                    title = line.get("name")
                     if "[live]" in title.lower():
                         title = title.replace("[live]", "")
                     elif "(live)" in title.lower():
@@ -116,7 +122,7 @@ class RawFileWriter:
             stripped_artist = artist.replace('"', "'")
             bash_command = f'songtext -t "{stripped_title}" -a "{stripped_artist}"'
             try:
-                song_lyrics = subprocess.check_output(['bash', '-c', bash_command])
+                song_lyrics = subprocess.check_output(["bash", "-c", bash_command])
                 print(f"Success fetching {artist} - {title} lyrics from api")
                 if isinstance(song_lyrics, bytes):
                     song_lyrics = song_lyrics.decode("utf-8")
@@ -144,17 +150,29 @@ class RawFileWriter:
         :param page_num: Page number.
         :return: JSON response from API.
         """
-        date_start = date.replace(hour=0).replace(minute=0).replace(second=0).replace(microsecond=0)
+        date_start = (
+            date.replace(hour=0)
+            .replace(minute=0)
+            .replace(second=0)
+            .replace(microsecond=0)
+        )
         date_start_epoch = int(date_start.timestamp())
-        date_end_epoch = int(date_start.replace(hour=23).replace(minute=59).replace(second=59).timestamp())
-        api_url = f"http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks" \
-                  f"&user={self.username}&" \
-                  f"api_key=8257fbe241e266367f27e30b0e866aba&" \
-                  f"&from={date_start_epoch}" \
-                  f"&to={date_end_epoch}" \
-                  f"&limit=200" \
-                  f"&page={page_num}" \
-                  f"&format=json"
+        date_end_epoch = int(
+            date_start.replace(hour=23)
+            .replace(minute=59)
+            .replace(second=59)
+            .timestamp()
+        )
+        api_url = (
+            f"http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks"
+            f"&user={self.username}&"
+            f"api_key=8257fbe241e266367f27e30b0e866aba&"
+            f"&from={date_start_epoch}"
+            f"&to={date_end_epoch}"
+            f"&limit=200"
+            f"&page={page_num}"
+            f"&format=json"
+        )
         response = requests.get(api_url).json()
         return response
 
@@ -171,21 +189,27 @@ class RawFileWriter:
         if num_pages > 1:
             for page_num in range(2, num_pages + 1):
                 lastfm_response = self.lastfm_api_query(date, page_num)
-                lastfm_tracks.extend(lastfm_response.get("recenttracks", {}).get("track"))
+                lastfm_tracks.extend(
+                    lastfm_response.get("recenttracks", {}).get("track")
+                )
         if lastfm_tracks:
             if isinstance(lastfm_tracks, dict):
                 lastfm_tracks = [lastfm_tracks]
 
             if lastfm_tracks and len(lastfm_tracks) > 0:
                 #  Remove currently playing song from past results
-                if lastfm_tracks[0].get("@attr", {}).get("nowplaying", False) \
-                        and date.date() != datetime.today().date():
+                if (
+                    lastfm_tracks[0].get("@attr", {}).get("nowplaying", False)
+                    and date.date() != datetime.today().date()
+                ):
                     del lastfm_tracks[0]
                 #  Remove duplicated playing song from current results
-                elif lastfm_tracks[0].get("@attr", {}).get("nowplaying", False) \
-                        and date.date() == datetime.today().date() \
-                        and len(lastfm_tracks) > 1 \
-                        and lastfm_tracks[0].get("name") == lastfm_tracks[1].get("name"):
+                elif (
+                    lastfm_tracks[0].get("@attr", {}).get("nowplaying", False)
+                    and date.date() == datetime.today().date()
+                    and len(lastfm_tracks) > 1
+                    and lastfm_tracks[0].get("name") == lastfm_tracks[1].get("name")
+                ):
                     del lastfm_tracks[0]
         return lastfm_tracks
 
@@ -206,7 +230,9 @@ class RawFileWriter:
         :return: Filepath
         """
         artist_track_string = f"{artist}{title}"
-        artist_track_string = ''.join(e for e in artist_track_string if e.isalnum())[:35]
+        artist_track_string = "".join(e for e in artist_track_string if e.isalnum())[
+            :35
+        ]
         return f"{self.lyrics_file_path}/{artist_track_string}.txt"
 
     @staticmethod
@@ -230,7 +256,7 @@ class RawFileWriter:
         return not (file_exists and not file_is_today)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     start_time = datetime.now()
 
     start_date = datetime.today() - timedelta(days=2)
@@ -238,5 +264,3 @@ if __name__ == '__main__':
     file_writer.process_data_for_all_days()
 
     print(f"\n(took {(datetime.now() - start_time).seconds} seconds)")
-
-

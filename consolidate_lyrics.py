@@ -13,9 +13,13 @@ from shared.config import Config
 
 
 class Consolidator:
-
-    def __init__(self, start_date: datetime = None, end_date: datetime = datetime.today(),
-                 interval: raw_file_writer.Interval = raw_file_writer.Interval.YEAR.value, include_lyrics: bool = False):
+    def __init__(
+        self,
+        start_date: datetime = None,
+        end_date: datetime = datetime.today(),
+        interval: raw_file_writer.Interval = raw_file_writer.Interval.YEAR.value,
+        include_lyrics: bool = False,
+    ):
         """
         :param start_date: Earliest date to get data for. Default to the day the user joined Last.fm
         :param end_date: Latest date to get data for. Default to today.
@@ -31,12 +35,15 @@ class Consolidator:
         self.include_lyrics = include_lyrics
         self.username = lastfm_username
         self.api_key = Config.API_KEY
-        self.lyrics_file_path = Config.RAW_DATA_PATH + '/users/{username}/lyricsstore'.format(
-            username=self.username)
+        self.lyrics_file_path = (
+            Config.RAW_DATA_PATH
+            + "/users/{username}/lyricsstore".format(username=self.username)
+        )
         if not os.path.exists(self.lyrics_file_path):
             os.makedirs(self.lyrics_file_path)
-        self.raw_file_writer = raw_file_writer.RawFileWriter(interval=raw_file_writer.Interval.DAY.value,
-                                                             include_lyrics=True)
+        self.raw_file_writer = raw_file_writer.RawFileWriter(
+            interval=raw_file_writer.Interval.DAY.value, include_lyrics=True
+        )
 
     def process_data_for_all_days(self):
         """
@@ -59,8 +66,8 @@ class Consolidator:
                 return
             for line in json_data:
                 if line.get("lyrics") in [None, "null"]:
-                    artist = line.get('artist', {}).get('#text')
-                    title = line.get('name')
+                    artist = line.get("artist", {}).get("#text")
+                    title = line.get("name")
                     if "[live]" in title.lower():
                         print("LIVE removed")
                         title = title.replace("[live]", "")
@@ -89,7 +96,7 @@ class Consolidator:
         bash_command = f'songtext -t "{stripped_title}" -a "{stripped_artist}"'
         song_lyrics = "Null"
         try:
-            song_lyrics = subprocess.check_output(['bash', '-c', bash_command])
+            song_lyrics = subprocess.check_output(["bash", "-c", bash_command])
             print(f"Success fetching {artist} - {title} lyrics from api")
             if isinstance(song_lyrics, bytes):
                 song_lyrics = song_lyrics.decode("utf-8")
@@ -102,7 +109,11 @@ class Consolidator:
                 song_lyrics = "null"
         if "Instrumental" in song_lyrics:
             song_lyrics = "Instrumental"
-        elif not song_lyrics.isspace() and not len(song_lyrics) < 1 and not song_lyrics.lower() == "null":
+        elif (
+            not song_lyrics.isspace()
+            and not len(song_lyrics) < 1
+            and not song_lyrics.lower() == "null"
+        ):
             song_lines = song_lyrics.split("\n")
             if len(song_lines) > 2:
                 title_removed = song_lines[3:]
@@ -113,13 +124,11 @@ class Consolidator:
         return song_lyrics
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     start_time = datetime.now()
 
     start_date = datetime.today() - timedelta(days=2)
     consolidator = Consolidator()
     consolidator.process_data_for_all_days()
 
-
     print(f"\n(took {(datetime.now() - start_time).seconds} seconds)")
-

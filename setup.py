@@ -20,6 +20,7 @@ setup_args = {
             "singthis=fortunelyrics.singthis:go",
             "getsongs=fortunelyrics.getsongs:go",
             "musicstats=lasthop.lasthop:go",
+            "makeplaylist=lasthop.spotify:go",
         ],
     },
 }

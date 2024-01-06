@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 
-requirements = ["python-dateutil", "requests", "profanity", "lyricsgenius"]
+requirements = ["python-dateutil", "requests", "profanity", "lyricsgenius", "spotipy", "urllib3-2.1.0"]
 
 
 setup_args = {

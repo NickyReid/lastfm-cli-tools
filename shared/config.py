@@ -2,7 +2,7 @@ import os
 
 
 class Config(object):
-    API_KEY = "8257fbe241e266367f27e30b0e866aba"
+    API_KEY = os.getenv("LAST_FM_API_KEY")
     CLEAN = False  # Omits lyrics with swearing
     SWEARS = ["bitch", " ass ", "asshole"]  # not included in profanity library
     LYRIC_STASH_PATH = os.path.dirname(os.path.realpath(__file__)) + "/lyricsstash"

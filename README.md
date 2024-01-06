@@ -1,14 +1,11 @@
 # lastfm-cli-tools
 ## A collection of python cli tools for personalised last.fm listening history and lyrics.
-Best results when used with [lolcat cli colours](https://github.com/busyloop/lolcat) (```$ brew install lolcat``` )
+
 
 ## Fortunelyrics
 
 ### Print lyrics from songs on your last.fm.
 
-Uses the [Last.fm API](https://www.last.fm/api) and [lyricsgenius python library](https://pypi.org/project/lyricsgenius/) 
-
-_Note: You will need a [Genius API key](https://docs.genius.com/#/getting-started-h1)_
 
 #### Instructions:
 
@@ -23,7 +20,7 @@ sing
 
 Example: (colourful output courtesy of [lolcat](https://github.com/busyloop/lolcat))
 
-![sing for schiz0rr](https://nickyreid.github.io/images/lastfm-cli-tools-screenshots/fortunelyrics2018-06-09.png "$ sing")
+[comment]: <> (![sing for schiz0rr]&#40;https://nickyreid.github.io/images/lastfm-cli-tools-screenshots/fortunelyrics2018-06-09.png "$ sing"&#41;)
 
 
 ##### Print lyrics of the song currently playing (or last song played):
@@ -33,7 +30,7 @@ singthis
 
 Example: (colourful output courtesy of [lolcat](https://github.com/busyloop/lolcat))
 
-![singthis for schiz0rr](https://nickyreid.github.io/images/lastfm-cli-tools-screenshots/singthis2018-06-09.png "$ sing")
+[comment]: <> (![singthis for schiz0rr]&#40;https://nickyreid.github.io/images/lastfm-cli-tools-screenshots/singthis2018-06-09.png "$ sing"&#41;)
 
 
 
@@ -58,8 +55,24 @@ $  musicstats
 * Songs played around this time of day, each year since joining Last.fm
 * All artist play counts on this day, for each year since joining Last.fm
 
-Example: (colourful output courtesy of [lolcat](https://github.com/busyloop/lolcat))
+## Make Spotify Playlist
 
-![schiz0rr musicstats 1](https://nickyreid.github.io/images/lastfm-cli-tools-screenshots/lasthop02018-06-09.png "$ musicstats")
+Make a Spotify playlist with music from this day in history
 
-![schiz0rr musicstats 2](https://nickyreid.github.io/images/lastfm-cli-tools-screenshots/Lasthop12018-06-09.png "$ musicstats")
+```python
+makeplaylist
+```
+
+### Note:
+You will need the following access:
+- [Last.fm API key](https://www.last.fm/api/authentication)
+- [Genius API key](https://docs.genius.com/#/getting-started-h1)
+- [Spotify access token](https://developer.spotify.com/documentation/web-api/tutorials/getting-started) 
+
+[comment]: <> (Example: &#40;colourful output courtesy of [lolcat]&#40;https://github.com/busyloop/lolcat&#41;&#41;)
+
+[comment]: <> (![schiz0rr musicstats 1]&#40;https://nickyreid.github.io/images/lastfm-cli-tools-screenshots/lasthop02018-06-09.png "$ musicstats"&#41;)
+
+[comment]: <> (![schiz0rr musicstats 2]&#40;https://nickyreid.github.io/images/lastfm-cli-tools-screenshots/Lasthop12018-06-09.png "$ musicstats"&#41;)
+
+[comment]: <> (&#40; Best results when used with [lolcat cli colours]&#40;https://github.com/busyloop/lolcat&#41; &#40;```$ brew install lolcat`` `&#41;)

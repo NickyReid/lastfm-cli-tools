@@ -1,11 +1,9 @@
 # lastfm-cli-tools
 ## A collection of python cli tools for personalised last.fm listening history and lyrics.
 
-
 ## Fortunelyrics
 
 ### Print lyrics from songs on your last.fm.
-
 
 #### Instructions:
 
@@ -22,7 +20,6 @@ Example: (colourful output courtesy of [lolcat](https://github.com/busyloop/lolc
 
 [comment]: <> (![sing for schiz0rr]&#40;https://nickyreid.github.io/images/lastfm-cli-tools-screenshots/fortunelyrics2018-06-09.png "$ sing"&#41;)
 
-
 ##### Print lyrics of the song currently playing (or last song played):
 ```python
 singthis
@@ -31,9 +28,6 @@ singthis
 Example: (colourful output courtesy of [lolcat](https://github.com/busyloop/lolcat))
 
 [comment]: <> (![singthis for schiz0rr]&#40;https://nickyreid.github.io/images/lastfm-cli-tools-screenshots/singthis2018-06-09.png "$ sing"&#41;)
-
-
-
 
 ## Lasthop Music Stats
 

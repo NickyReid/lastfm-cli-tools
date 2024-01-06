@@ -3,10 +3,8 @@ import urllib.request
 import urllib.error
 import urllib.parse
 import sys
-import subprocess
 import random
 import os
-import lyricsgenius
 import multiprocessing
 from shared.config import Config
 from profanity import profanity

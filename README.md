@@ -54,7 +54,7 @@ $  musicstats
 Make a Spotify playlist with music from this day in history
 
 ```python
-makeplaylist
+    python3 lasthop/spotify.py
 ```
 
 ### Note:
@@ -62,6 +62,12 @@ You will need the following access:
 - [Last.fm API key](https://www.last.fm/api/authentication)
 - [Genius API key](https://docs.genius.com/#/getting-started-h1)
 - [Spotify access token](https://developer.spotify.com/documentation/web-api/tutorials/getting-started) 
+
+The following Environment variables must be set:
+* LAST_FM_API_KEY
+* GENIUS_ACCESS_TOKEN
+* SPOTIPY_CLIENT_ID
+* SPOTIPY_CLIENT_SECRET
 
 [comment]: <> (Example: &#40;colourful output courtesy of [lolcat]&#40;https://github.com/busyloop/lolcat&#41;&#41;)
 

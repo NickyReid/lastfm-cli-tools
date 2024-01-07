@@ -1,4 +1,5 @@
 import re
+import os
 import spotipy
 import lasthop
 import lastfm_user_data
@@ -6,8 +7,6 @@ import random
 
 from spotipy.oauth2 import SpotifyOAuth
 from datetime import datetime
-
-
 
 
 def go():
@@ -123,7 +122,8 @@ class PlaylistMaker:
     @classmethod
     def run(cls):
         scope = "playlist-modify-private"
-        spotify_client = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope))
+        redirect_uri = "http://127.0.0.1:8000/"
+        spotify_client = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope, redirect_uri=redirect_uri))
 
         artist_tracks = cls.get_tracks()
         if not artist_tracks:

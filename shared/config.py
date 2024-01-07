@@ -4,7 +4,7 @@ import os
 class Config(object):
     API_KEY = os.getenv("LAST_FM_API_KEY")
     CLEAN = False  # Omits lyrics with swearing
-    SWEARS = ["bitch", " ass ", "asshole"]  # not included in profanity library
+    SWEARS = ["bitch", " ass ", "asshole"]  # not included in profanity library 🙈
     LYRIC_STASH_PATH = os.path.dirname(os.path.realpath(__file__)) + "/lyricsstash"
     RAW_DATA_PATH = os.path.dirname(os.path.realpath(__file__)) + "/rawdata"
     TOP_TRACKS_LIMIT = "100"  # The number of results to fetch

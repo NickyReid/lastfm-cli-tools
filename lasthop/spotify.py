@@ -99,8 +99,9 @@ class PlaylistMaker:
 
     @classmethod
     def search_for_tracks(cls, spotify_client, playlist_id, artist_tracks):
+        track_count = sum([len(y) for x, y in artist_tracks.items()])
         for artist, tracks in artist_tracks.items():
-            if len(tracks) < 2:
+            if track_count > 50 and len(tracks) < 2:
                 continue
             random.shuffle(tracks)
             selected_track = tracks[0]

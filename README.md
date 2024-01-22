@@ -23,9 +23,10 @@ singthis
 
 ## Lasthop Music Stats
 
+This is deprecated since I made a [Web app version](https://github.com/NickyReid/LasthopWeb).  
+
 ### Lasthop fetches music stats from your last.fm profile about your listening habits from this day in the years gone by.
 
-This is deprecated since I made a [Web app version](https://github.com/NickyReid/LasthopWeb).  
 
 ##### To run:
 
